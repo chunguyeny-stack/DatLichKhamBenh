@@ -1,0 +1,52 @@
+@{
+    ViewData["Title"] = "Đăng nhập";
+    Layout = "_LayoutAuth"; // Sử dụng layout không có menu
+}
+
+<div class="login-card">
+    <!-- Khối Logo và Tên MediSlot -->
+    <div class="brand-container">
+        <img src="~/images/logo.png" alt="MediSlot Logo" />
+        <span>MediSlot</span>
+    </div>
+    
+    <h1 class="login-title">Đăng nhập</h1>
+
+    <!-- Form gửi dữ liệu về Controller (Tạm thời để trống action) -->
+    <form method="post" asp-controller="Account" asp-action="Login">
+        
+        <div class="form-group">
+            <input type="text" name="Username" class="form-control" placeholder="Email, số điện thoại hoặc tên đăng nhập" required autofocus />
+        </div>
+
+        <div class="form-group">
+            <input type="password" name="Password" class="form-control" placeholder="Mật khẩu" required />
+        </div>
+
+        <!-- Phần hiển thị lỗi nếu có (sẽ code logic sau) -->
+        @if (ViewData.ModelState.ErrorCount > 0)
+        {
+            <div style="color: #d13438; font-size: 14px; margin-bottom: 15px;">
+                Tài khoản hoặc mật khẩu không chính xác.
+            </div>
+        }
+
+        <div class="ms-links" style="margin-top: 10px; margin-bottom: 20px;">
+            <a href="#">Quên mật khẩu?</a>
+        </div>
+
+        <button type="submit" class="btn-submit">Đăng nhập</button>
+    </form>
+
+    <!-- Dành cho Bệnh nhân chưa có tài khoản -->
+    <div class="ms-links" style="margin-top: 20px;">
+        Chưa có tài khoản? <a asp-action="Register">Tạo tài khoản mới</a>
+    </div>
+</div>
+
+<!-- Footer nhỏ ở góc dưới cùng bên phải -->
+<div class="page-footer">
+    <a href="#">Điều khoản sử dụng</a>
+    <a href="#">Quyền riêng tư & cookie</a>
+    <span>...</span>
+</div>

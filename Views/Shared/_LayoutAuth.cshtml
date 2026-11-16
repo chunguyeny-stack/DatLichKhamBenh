@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - MediSlot</title>
+    
+    <!-- Gọi file CSS dùng chung (biến màu) -->
+    <link rel="stylesheet" href="~/css/common.css" />
+    <!-- Gọi file CSS riêng cho trang Đăng nhập -->
+    <link rel="stylesheet" href="~/css/auth.css" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="~/images/logo.png" />
+</head>
+<body class="auth-body">
+    <!-- Nội dung trang Login/Register sẽ được đổ vào đây -->
+    @RenderBody()
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
