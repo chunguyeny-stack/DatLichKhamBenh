@@ -37,6 +37,7 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             border-radius: 8px; /* Bo góc cho container */
             border: 1px solid rgba(255, 255, 255, 0.7);
+            position: relative;
         }
         /* CSS cho phần logo */
         .logo-header { display: flex; align-items: center; margin-bottom: 24px; }
@@ -76,7 +77,18 @@
         }
         
         .btn-primary:hover { background-color: #005da6; border-color: #005da6; color: #ffffff !important; }
-        /* CSS cho nút đăng nhập bằng Google */
+                /* CSS cho nút quay lại */
+        .btn-back {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #1b1b1b;
+            font-size: 1.2rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .btn-back:hover { color: #0067b8; }
+        /* CSS for the Google login button */
         .btn-google {
             background-color: #fff;
             border: 1px solid #8c8c8c;
@@ -129,6 +141,10 @@
 <body>
     <!-- Container kính mờ -->
     <div class="glass-container">
+                <!-- Nút quay lại -->
+        <a asp-controller="Home" asp-action="Index" class="btn-back" title="Về trang chủ">
+            <i class="bi bi-arrow-left"></i>
+        </a>
         <div class="logo-header">
             <img src="~/images/logo.png" alt="MediSlot Logo" class="logo-img" />
             <span class="logo-text">MediSlot</span>
