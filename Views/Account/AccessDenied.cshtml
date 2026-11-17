@@ -1,0 +1,106 @@
+@{
+    ViewData["Title"] = "Từ chối truy cập";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"]) - MediSlot</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        /* CSS cho toàn bộ trang */
+        body {
+            background: url('https://i.pinimg.com/1200x/de/7f/79/de7f7963f12bfd74d5f94be340e4381e.jpg') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            color: #1b1b1b;
+        }
+        /* CSS cho container kính mờ */
+        .glass-container {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            width: 100%;
+            max-width: 440px;
+            padding: 44px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            text-align: center;
+        }
+        /* CSS cho phần logo */
+        .logo-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .logo-img { height: 34px; margin-right: 12px; }
+        .logo-text { font-size: 1.5rem; font-weight: 600; color: #5e5e5e; letter-spacing: -0.5px; }
+
+        .lock-icon {
+            font-size: 3.5rem;
+            color: #d13438;
+            margin-bottom: 16px;
+            line-height: 1;
+        }
+
+        h2 { font-size: 1.75rem; font-weight: 600; margin-bottom: 12px; color: #1a1a1a; }
+        .subtitle { font-size: 0.95rem; color: #555; margin-bottom: 24px; line-height: 1.5; }
+        /* CSS cho nút quay lại trang chủ */
+        .btn-primary {
+            background-color: #0067b8;
+            border: 1px solid #0067b8;
+            border-radius: 4px;
+            padding: 10px;
+            width: 100%;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+            color: #ffffff !important;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary:hover { 
+            background-color: #005da6; 
+            border-color: #005da6; 
+            color: #ffffff !important; 
+        }
+
+        .links { margin-top: 20px; }
+        .links a { color: #0067b8; text-decoration: none; font-size: 0.95rem; }
+        .links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="glass-container">
+        <div class="logo-header">
+            <img src="~/images/logo.png" alt="MediSlot Logo" class="logo-img" />
+            <span class="logo-text">MediSlot</span>
+        </div>
+
+        <div class="lock-icon">🔒</div>
+
+        <h2>Từ chối truy cập</h2>
+        <p class="subtitle">Bạn không có quyền truy cập vào khu vực này. Vui lòng kiểm tra lại tài khoản hoặc liên hệ với Quản trị viên để được cấp quyền.</p>
+        
+        <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Quay lại trang chủ</a>
+        
+        <div class="links">
+            <a asp-controller="Account" asp-action="Login">Hoặc đăng nhập bằng tài khoản khác</a>
+        </div>
+    </div>
+
+</body>
+</html>
