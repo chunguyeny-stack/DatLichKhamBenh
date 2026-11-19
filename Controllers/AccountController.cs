@@ -24,9 +24,10 @@ namespace DatLichKhamBenh.Controllers
         }
 
         // =====================================================
-        // 1. ĐĂNG NHẬP
-        // GET: /Account/Login
+        // 1. ĐĂNG NHẬP (Xử lý khóa tài khoản + Ép đổi MK lần đầu)
         // =====================================================
+
+        // GET: /Account/Login
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Login(string? returnUrl = null)
@@ -47,7 +48,7 @@ namespace DatLichKhamBenh.Controllers
 
             var user = await _userManager.FindByEmailAsync(model.Email);
 
-            // Kiểm tra tài khoản bị khóa vĩnh viễn (bởi Admin)
+            // 🔥 BƯỚC 1: Kiểm tra tài khoản có bị Admin khóa không (LockoutEnd > Now)
             if (user != null && user.LockoutEnd != null && user.LockoutEnd > DateTimeOffset.Now)
             {
                 ModelState.AddModelError(string.Empty,
@@ -55,6 +56,7 @@ namespace DatLichKhamBenh.Controllers
                 return View(model);
             }
 
+            // 🔥 BƯỚC 2: Xác thực mật khẩu
             var result = await _signInManager.PasswordSignInAsync(
                 model.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
 
@@ -62,13 +64,14 @@ namespace DatLichKhamBenh.Controllers
             {
                 _logger.LogInformation($"Người dùng {model.Email} đăng nhập thành công.");
 
-                // Nếu là lần đầu đăng nhập (do Admin tạo) → buộc đổi mật khẩu
+                // 🔥 BƯỚC 3: Nếu là lần đầu đăng nhập (Admin tạo TK) → Bắt buộc đổi MK
                 if (user != null && user.MustChangePassword)
                 {
+                    // Chuyển sang trang đổi mật khẩu (không cho vào Dashboard)
                     return RedirectToAction(nameof(ChangePassword));
                 }
 
-                // Điều hướng theo Role
+                // 🔥 BƯỚC 4: Điều hướng theo Role
                 if (user != null)
                 {
                     if (await _userManager.IsInRoleAsync(user, "Admin"))
@@ -79,12 +82,14 @@ namespace DatLichKhamBenh.Controllers
                         return RedirectToAction("Index", "Receptionist", new { area = "Receptionist" });
                 }
 
+                // Nếu có returnUrl hợp lệ (trường hợp bị redirect do chưa login)
                 if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                     return Redirect(returnUrl);
 
                 return RedirectToAction("Index", "Home");
             }
 
+            // Trường hợp đăng nhập sai quá số lần -> bị khóa tạm thời (15 phút)
             if (result.IsLockedOut)
             {
                 ModelState.AddModelError(string.Empty,
@@ -100,8 +105,9 @@ namespace DatLichKhamBenh.Controllers
 
         // =====================================================
         // 2. ĐĂNG KÝ (Dành cho Bệnh nhân)
-        // GET: /Account/Register
         // =====================================================
+
+        // GET: /Account/Register
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Register()
@@ -133,7 +139,7 @@ namespace DatLichKhamBenh.Controllers
                 MiddleName = model.MiddleName,
                 PhoneNumber = model.PhoneNumber,
                 EmailConfirmed = true,
-                MustChangePassword = false
+                MustChangePassword = false // Bệnh nhân tự đăng ký → không ép đổi MK
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -156,7 +162,6 @@ namespace DatLichKhamBenh.Controllers
 
         // =====================================================
         // 3. ĐĂNG XUẤT
-        // POST: /Account/Logout
         // =====================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -169,7 +174,6 @@ namespace DatLichKhamBenh.Controllers
 
         // =====================================================
         // 4. TRANG TỪ CHỐI TRUY CẬP
-        // GET: /Account/AccessDenied
         // =====================================================
         [HttpGet]
         [AllowAnonymous]
@@ -180,8 +184,9 @@ namespace DatLichKhamBenh.Controllers
 
         // =====================================================
         // 5. THÔNG TIN CÁ NHÂN
-        // GET: /Account/Profile
         // =====================================================
+
+        // GET: /Account/Profile
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> Profile()
@@ -202,12 +207,12 @@ namespace DatLichKhamBenh.Controllers
 
             var model = new ProfileViewModel
             {
-                MiddleName = user.MiddleName,
-                FirstName = user.FirstName,
+                MiddleName = user.MiddleName ?? string.Empty,
+                FirstName = user.FirstName ?? string.Empty,
                 Email = user.Email ?? string.Empty,
-                PhoneNumber = user.PhoneNumber,
+                PhoneNumber = user.PhoneNumber ?? string.Empty,
                 RoleName = roleName,
-                // DateOfBirth = user.DateOfBirth // nếu bạn thêm field này vào ApplicationUser
+                DateOfBirth = user.DateOfBirth
             };
 
             return View(model);
@@ -223,10 +228,11 @@ namespace DatLichKhamBenh.Controllers
             if (user == null)
                 return Challenge();
 
-            // Chỉ cho phép cập nhật các trường được phép
+            // Chỉ cập nhật các trường được phép (không cho đổi Email/Role)
             user.MiddleName = model.MiddleName;
             user.FirstName = model.FirstName;
             user.PhoneNumber = model.PhoneNumber;
+            user.DateOfBirth = model.DateOfBirth;
 
             var result = await _userManager.UpdateAsync(user);
 
@@ -245,9 +251,10 @@ namespace DatLichKhamBenh.Controllers
         }
 
         // =====================================================
-        // 6. ĐỔI MẬT KHẨU
-        // GET: /Account/ChangePassword
+        // 6. ĐỔI MẬT KHẨU (Có validate bảo mật)
         // =====================================================
+
+        // GET: /Account/ChangePassword
         [HttpGet]
         [Authorize]
         public IActionResult ChangePassword()
@@ -268,6 +275,16 @@ namespace DatLichKhamBenh.Controllers
             if (user == null)
                 return Challenge();
 
+            // 🔥 BƯỚC QUAN TRỌNG: Nếu user đang bị ép đổi MK lần đầu,
+            // không được phép đặt lại y nguyên mật khẩu mặc định (MedBooking@123)
+            // vì như vậy sẽ vô hiệu hóa tính bảo mật của cơ chế "MustChangePassword"
+            if (user.MustChangePassword && model.NewPassword == "MedBooking@123")
+            {
+                ModelState.AddModelError("NewPassword",
+                    "Không được dùng lại mật khẩu mặc định. Vui lòng chọn mật khẩu khác.");
+                return View(model);
+            }
+
             var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
 
             if (!result.Succeeded)
@@ -277,7 +294,7 @@ namespace DatLichKhamBenh.Controllers
                 return View(model);
             }
 
-            // Tắt cờ MustChangePassword sau khi đổi thành công
+            // 🔥 Tắt cờ MustChangePassword sau khi đổi thành công
             if (user.MustChangePassword)
             {
                 user.MustChangePassword = false;
@@ -293,8 +310,9 @@ namespace DatLichKhamBenh.Controllers
 
         // =====================================================
         // 7. ĐĂNG NHẬP BẰNG GOOGLE (External Login)
-        // POST: /Account/ExternalLogin
         // =====================================================
+
+        // POST: /Account/ExternalLogin
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -320,7 +338,7 @@ namespace DatLichKhamBenh.Controllers
             if (info == null)
                 return RedirectToAction(nameof(Login));
 
-            // Thử đăng nhập nếu tài khoản đã liên kết
+            // Thử đăng nhập nếu tài khoản đã liên kết Google
             var result = await _signInManager.ExternalLoginSignInAsync(
                 info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
 

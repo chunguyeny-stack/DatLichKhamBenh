@@ -1,8 +1,7 @@
 @model IEnumerable<DatLichKhamBenh.Models.Entities.ApplicationUser>
 @{
     ViewData["Title"] = "Quản lý người dùng";
-    // Sử dụng layout mặc định của Admin (nếu có) hoặc để null nếu muốn tự làm navbar
-    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml"; 
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
 }
 
 <style>
@@ -18,6 +17,7 @@
     .table { margin-bottom: 0; }
     .table thead th { background-color: #f8f9fa; border-bottom: 2px solid #e1dfdd; font-weight: 600; color: #1b1b1b; padding: 12px 16px; }
     .table tbody td { padding: 12px 16px; vertical-align: middle; border-bottom: 1px solid #f3f2f1; color: #333; }
+    .table tbody tr:hover { background-color: #faf9f8; }
     
     .badge-role { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
     .role-Admin { background-color: #d13438; color: white; }
@@ -26,7 +26,7 @@
     .role-Patient { background-color: #767676; color: white; }
     
     .status-active { color: #107c10; font-weight: 600; }
-    .status-locked { color: #d13438; font-weight: 600; }
+    .status-locked { color: #d13438; font-weight: 600; cursor: help; }
 
     .btn-action { padding: 4px 12px; font-size: 0.9rem; border-radius: 4px; text-decoration: none; font-weight: 600; display: inline-block; }
     .btn-lock { color: #d13438; border: 1px solid #d13438; background: transparent; }
@@ -36,6 +36,8 @@
 </style>
 
 <div class="container-fluid py-4">
+
+    <!-- HEADER -->
     <div class="page-header">
         <h1 class="page-title"><i class="bi bi-people-fill"></i> Quản lý Người dùng</h1>
         <a asp-action="CreateStaff" class="btn-create">
@@ -43,15 +45,25 @@
         </a>
     </div>
 
-    <!-- Thông báo TempData (nếu có) -->
+    <!-- THÔNG BÁO THÀNH CÔNG -->
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
-            @TempData["SuccessMessage"]
+            <i class="bi bi-check-circle-fill"></i> @TempData["SuccessMessage"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
+    <!-- THÔNG BÁO LỖI -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- BẢNG DANH SÁCH -->
     <div class="card-table">
         <table class="table table-hover">
             <thead>
@@ -65,60 +77,97 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var user in Model)
+                @if (!Model.Any())
                 {
-                    var isLocked = user.LockoutEnd != null && user.LockoutEnd > DateTimeOffset.Now;
                     <tr>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div style="width: 35px; height: 35px; background: #e1dfdd; border-radius: 50%; display:flex; align-items:center; justify-content:center; margin-right: 10px; font-weight: bold; color: #555;">
-                                    @(user.FirstName?.Substring(0, 1).ToUpper() ?? "U")
-                                </div>
-                                <span>@user.MiddleName @user.FirstName</span>
-                            </div>
-                        </td>
-                        <td>@user.Email</td>
-                        <td>@(user.PhoneNumber ?? "Chưa cập nhật")</td>
-                        <td>
-                            <!-- Giả sử bạn có truyền RoleName vào ViewModel hoặc dùng ViewBag -->
-                            @if (ViewBag.UserRoles != null && ViewBag.UserRoles.ContainsKey(user.Id))
-                            {
-                                var role = ViewBag.UserRoles[user.Id];
-                                <span class="badge-role role-@role">@role</span>
-                            }
-                            else
-                            {
-                                <span class="badge-role bg-secondary text-white">Chưa xác định</span>
-                            }
-                        </td>
-                        <td>
-                            @if (isLocked)
-                            {
-                                <span class="status-locked"><i class="bi bi-lock-fill"></i> Đã khóa</span>
-                            }
-                            else
-                            {
-                                <span class="status-active"><i class="bi bi-check-circle-fill"></i> Hoạt động</span>
-                            }
-                        </td>
-                        <td class="text-end">
-                            @if (isLocked)
-                            {
-                                <form asp-action="UnlockUser" method="post" class="d-inline">
-                                    <input type="hidden" name="userId" value="@user.Id" />
-                                    <button type="submit" class="btn-action btn-unlock" title="Mở khóa tài khoản">
-                                        <i class="bi bi-unlock-fill"></i> Mở khóa
-                                    </button>
-                                </form>
-                            }
-                            else
-                            {
-                                <a asp-action="LockUser" asp-route-id="@user.Id" class="btn-action btn-lock" title="Khóa tài khoản">
-                                    <i class="bi bi-lock-fill"></i> Khóa
-                                </a>
-                            }
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                            Chưa có người dùng nào trong hệ thống.
                         </td>
                     </tr>
+                }
+                else
+                {
+                    @foreach (var user in Model)
+                    {
+                        // Kiểm tra xem tài khoản có đang bị khóa không
+                        var isLocked = user.LockoutEnd != null && user.LockoutEnd > DateTimeOffset.Now;
+
+                        // Lấy ký tự đầu tiên của Tên (an toàn với null)
+                        var avatarChar = !string.IsNullOrEmpty(user.FirstName)
+                            ? user.FirstName.Substring(0, 1).ToUpper()
+                            : "U";
+
+                        <tr>
+                            <!-- HỌ TÊN + AVATAR -->
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div style="width: 35px; height: 35px; background: #e1dfdd; border-radius: 50%; display:flex; align-items:center; justify-content:center; margin-right: 10px; font-weight: bold; color: #555;">
+                                        @avatarChar
+                                    </div>
+                                    <span>@user.MiddleName @user.FirstName</span>
+                                </div>
+                            </td>
+
+                            <!-- EMAIL -->
+                            <td>@user.Email</td>
+
+                            <!-- SĐT -->
+                            <td>@(string.IsNullOrEmpty(user.PhoneNumber) ? "Chưa cập nhật" : user.PhoneNumber)</td>
+
+                            <!-- VAI TRÒ -->
+                            <td>
+                                @if (ViewBag.UserRoles != null && ViewBag.UserRoles.ContainsKey(user.Id))
+                                {
+                                    var role = (string)ViewBag.UserRoles[user.Id];
+                                    <span class="badge-role role-@role">@role</span>
+                                }
+                                else
+                                {
+                                    <span class="badge-role bg-secondary text-white">Chưa xác định</span>
+                                }
+                            </td>
+
+                            <!-- TRẠNG THÁI -->
+                            <td>
+                                @if (isLocked)
+                                {
+                                    // Hiển thị lý do khóa khi rê chuột (title)
+                                    <span class="status-locked" title="Lý do: @(user.LockoutReason ?? "Không có lý do")">
+                                        <i class="bi bi-lock-fill"></i> Đã khóa
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="status-active">
+                                        <i class="bi bi-check-circle-fill"></i> Hoạt động
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- THAO TÁC -->
+                            <td class="text-end">
+                                @if (isLocked)
+                                {
+                                    <!-- NÚT MỞ KHÓA -->
+                                    <form asp-action="UnlockUser" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken() <!-- 🔥 BẮT BUỘC: Nếu thiếu sẽ bị lỗi 400 Bad Request -->
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <button type="submit" class="btn-action btn-unlock" title="Mở khóa tài khoản">
+                                            <i class="bi bi-unlock-fill"></i> Mở khóa
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <!-- NÚT KHÓA (chuyển sang trang nhập lý do) -->
+                                    <a asp-action="LockUser" asp-route-id="@user.Id" class="btn-action btn-lock" title="Khóa tài khoản">
+                                        <i class="bi bi-lock-fill"></i> Khóa
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>

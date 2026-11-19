@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using DatLichKhamBenh.Models.Entities;
 using Microsoft.EntityFrameworkCore;
+using DatLichKhamBenh.Data; // Rất quan trọng để gọi DbContext
 
 namespace DatLichKhamBenh.Data.Seed
 {
@@ -10,36 +11,25 @@ namespace DatLichKhamBenh.Data.Seed
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            // Thêm vào DbInitializer.cs, phía trên phần tạo tài khoản Admin
-// ==========================================
-// 0. TẠO DỮ LIỆU MẪU CHUYÊN KHOA
-// ==========================================
-try
-{
-    var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
-    if (!await context.Specialties.AnyAsync())
-    {
-        var specialties = new List<Specialty>
-        {
-            new Specialty { Name = "Tim mạch", Description = "Khám và điều trị các bệnh về tim mạch" },
-            new Specialty { Name = "Nhi khoa", Description = "Khám và điều trị bệnh cho trẻ em" },
-            new Specialty { Name = "Da liễu", Description = "Khám và điều trị các bệnh về da" },
-            new Specialty { Name = "Răng Hàm Mặt", Description = "Khám và điều trị răng miệng" },
-            new Specialty { Name = "Tai Mũi Họng", Description = "Khám và điều trị bệnh tai mũi họng" }
-        };
-        context.Specialties.AddRange(specialties);
-        await context.SaveChangesAsync();
-    }
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"[Seed] Lỗi tạo Specialty: {ex.Message}");
-}
-            // ==========================================
-            // 1. TẠO CÁC ROLE (QUYỀN) CƠ BẢN
-            // ==========================================
-            string[] roleNames = { "Admin", "Doctor", "Receptionist", "Patient" };
+            var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
 
+            // 0. TẠO DỮ LIỆU MẪU CHUYÊN KHOA
+            if (!await context.Specialties.AnyAsync())
+            {
+                var specialties = new List<Specialty>
+                {
+                    new Specialty { Name = "Tim mạch", Description = "Khám và điều trị các bệnh về tim mạch", IsActive = true },
+                    new Specialty { Name = "Nhi khoa", Description = "Khám và điều trị bệnh cho trẻ em", IsActive = true },
+                    new Specialty { Name = "Da liễu", Description = "Khám và điều trị các bệnh về da", IsActive = true },
+                    new Specialty { Name = "Răng Hàm Mặt", Description = "Khám và điều trị răng miệng", IsActive = true },
+                    new Specialty { Name = "Tai Mũi Họng", Description = "Khám và điều trị bệnh tai mũi họng", IsActive = true }
+                };
+                context.Specialties.AddRange(specialties);
+                await context.SaveChangesAsync();
+            }
+
+            // 1. TẠO CÁC ROLE
+            string[] roleNames = { "Admin", "Doctor", "Receptionist", "Patient" };
             foreach (var roleName in roleNames)
             {
                 if (!await roleManager.RoleExistsAsync(roleName))
@@ -48,12 +38,9 @@ catch (Exception ex)
                 }
             }
 
-            // ==========================================
-            // 2. TẠO TÀI KHOẢN ADMIN MẶC ĐỊNH
-            // ==========================================
+            // 2. TẠO TÀI KHOẢN ADMIN
             string adminEmail = "admin@medislot.com";
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
-
             if (adminUser == null)
             {
                 var newAdmin = new ApplicationUser
@@ -70,19 +57,15 @@ catch (Exception ex)
 
                 const string adminPassword = "Admin@123";
                 var createAdminResult = await userManager.CreateAsync(newAdmin, adminPassword);
-
                 if (createAdminResult.Succeeded)
                 {
                     await userManager.AddToRoleAsync(newAdmin, "Admin");
                 }
             }
 
-            // ==========================================
             // 3. TẠO TÀI KHOẢN BỆNH NHÂN MẪU
-            // ==========================================
             string patientEmail = "patient@gmail.com";
             var patientUser = await userManager.FindByEmailAsync(patientEmail);
-
             if (patientUser == null)
             {
                 var newPatient = new ApplicationUser
@@ -99,42 +82,20 @@ catch (Exception ex)
 
                 const string patientPassword = "Patient@123";
                 var createPatientResult = await userManager.CreateAsync(newPatient, patientPassword);
-
                 if (createPatientResult.Succeeded)
                 {
                     await userManager.AddToRoleAsync(newPatient, "Patient");
-
-                    // Tạo hồ sơ Patient (nếu bạn đã có DbSet<Patient>)
-                    try
+                    if (!await context.Patients.AnyAsync(p => p.UserId == newPatient.Id))
                     {
-                        var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
-                        var patientExists = await context.Patients
-                            .AnyAsync(p => p.UserId == newPatient.Id);
-
-                        if (!patientExists)
-                        {
-                            context.Patients.Add(new Patient
-                            {
-                                UserId = newPatient.Id,
-                                // Các trường khác nếu Patient entity có (DateOfBirth, Address...)
-                            });
-                            await context.SaveChangesAsync();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // Bỏ qua nếu bảng Patient chưa có trong DB (trước khi migration)
-                        Console.WriteLine($"[Seed] Không thể tạo hồ sơ Patient: {ex.Message}");
+                        context.Patients.Add(new Patient { UserId = newPatient.Id });
+                        await context.SaveChangesAsync();
                     }
                 }
             }
 
-            // ==========================================
-            // 4. (TÙY CHỌN) TẠO TÀI KHOẢN BÁC SĨ MẪU
-            // ==========================================
+            // 4. TẠO TÀI KHOẢN BÁC SĨ MẪU
             string doctorEmail = "doctor@medislot.com";
             var doctorUser = await userManager.FindByEmailAsync(doctorEmail);
-
             if (doctorUser == null)
             {
                 var newDoctor = new ApplicationUser
@@ -151,30 +112,20 @@ catch (Exception ex)
 
                 const string doctorPassword = "Doctor@123";
                 var createDoctorResult = await userManager.CreateAsync(newDoctor, doctorPassword);
-
                 if (createDoctorResult.Succeeded)
                 {
                     await userManager.AddToRoleAsync(newDoctor, "Doctor");
-
-                    try
+                    var defaultSpecialty = await context.Specialties.FirstOrDefaultAsync();
+                    if (!await context.Doctors.AnyAsync(d => d.UserId == newDoctor.Id))
                     {
-                        var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
-                        var doctorExists = await context.Doctors
-                            .AnyAsync(d => d.UserId == newDoctor.Id);
-
-                        if (!doctorExists)
+                        context.Doctors.Add(new Doctor
                         {
-                            context.Doctors.Add(new Doctor
-                            {
-                                UserId = newDoctor.Id,
-                                // Các trường khác nếu Doctor entity có (SpecialtyId, Experience...)
-                            });
-                            await context.SaveChangesAsync();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[Seed] Không thể tạo hồ sơ Doctor: {ex.Message}");
+                            UserId = newDoctor.Id,
+                            SpecialtyId = defaultSpecialty?.Id,
+                            IsActive = true,
+                            CreatedAt = DateTime.Now
+                        });
+                        await context.SaveChangesAsync();
                     }
                 }
             }
