@@ -6,17 +6,17 @@ namespace DatLichKhamBenh.Models.ViewModels
     public class RegisterViewModel
     {
         [Required(ErrorMessage = "Vui lòng nhập Họ đệm")]
-        public string MiddleName { get; set; }
+        public string MiddleName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Vui lòng nhập Tên")]
-        public string FirstName { get; set; }
+        public string FirstName { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Vui lòng nhập Email")]
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Vui lòng nhập Số điện thoại")]
-        public string PhoneNumber { get; set; }
+        public string PhoneNumber { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Vui lòng chọn Ngày sinh")]
         public DateTime DateOfBirth { get; set; }
@@ -24,10 +24,10 @@ namespace DatLichKhamBenh.Models.ViewModels
         [Required(ErrorMessage = "Vui lòng nhập mật khẩu")]
         [StringLength(100, MinimumLength = 6, ErrorMessage = "Mật khẩu phải từ 6 ký tự")]
         [DataType(DataType.Password)]
-        public string Password { get; set; }
+        public string Password { get; set; } = string.Empty;
 
         [DataType(DataType.Password)]
         [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
-        public string ConfirmPassword { get; set; }
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 }

@@ -2,8 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace DatLichKhamBenh.Models.ViewModels
 {
-    // Kế thừa IValidatableObject để có thể viết logic validate phức tạp
-    // (Kiểm tra chéo giữa các trường với nhau, ví dụ: Role == "Doctor" thì SpecialtyId bắt buộc)
     public class CreateStaffViewModel : IValidatableObject
     {
         [Required(ErrorMessage = "Vui lòng nhập họ đệm")]
@@ -24,18 +22,13 @@ namespace DatLichKhamBenh.Models.ViewModels
 
         [Required(ErrorMessage = "Vui lòng chọn vai trò")]
         [Display(Name = "Vai trò")]
-        public string Role { get; set; } = string.Empty; // "Doctor" hoặc "Receptionist"
+        public string Role { get; set; } = string.Empty;
 
-        // Trường này chỉ dùng khi Role = "Doctor"
         [Display(Name = "Chuyên khoa")]
         public int? SpecialtyId { get; set; }
 
-        // =====================================================
-        // LOGIC VALIDATE ĐIỀU KIỆN (Cross-field validation)
-        // =====================================================
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            // Nếu vai trò là Bác sĩ, bắt buộc phải chọn chuyên khoa
             if (Role == "Doctor" && (SpecialtyId == null || SpecialtyId <= 0))
             {
                 yield return new ValidationResult(
@@ -43,7 +36,6 @@ namespace DatLichKhamBenh.Models.ViewModels
                     new[] { nameof(SpecialtyId) });
             }
 
-            // (Tùy chọn) Nếu là Lễ tân, không được chọn chuyên khoa
             if (Role == "Receptionist" && SpecialtyId != null && SpecialtyId > 0)
             {
                 yield return new ValidationResult(

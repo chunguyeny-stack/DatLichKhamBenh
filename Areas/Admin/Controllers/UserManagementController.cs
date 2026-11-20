@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
-using DatLichKhamBenh.Data; // Namespace chứa ApplicationDbContext
+using DatLichKhamBenh.Data;
 
 namespace DatLichKhamBenh.Areas.Admin.Controllers
 {
@@ -86,7 +86,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                 FirstName = model.FirstName,
                 MiddleName = model.MiddleName,
                 EmailConfirmed = true,
-                MustChangePassword = true,
+                MustChangePassword = true, // Bắt buộc đổi MK lần đầu
                 LockoutEnabled = true
             };
 
@@ -99,7 +99,6 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
 
                 if (model.Role == "Doctor")
                 {
-                    // 🔥 ĐÃ SỬA TẠI ĐÂY: Thêm namespace đầy đủ để phân biệt với thư mục Areas/Doctor
                     _context.Doctors.Add(new DatLichKhamBenh.Models.Entities.Doctor
                     {
                         UserId = user.Id,
@@ -172,6 +171,69 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             await _userManager.UpdateAsync(user);
 
             TempData["SuccessMessage"] = $"Đã mở khóa tài khoản {user.Email}.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // =======================================================
+        // 5. RESET MẬT KHẨU (MỚI THÊM THEO YÊU CẦU)
+        // =======================================================
+        
+        [HttpGet]
+        public async Task<IActionResult> ResetPassword(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return NotFound();
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+
+            ViewBag.Email = user.Email;
+            ViewBag.UserId = user.Id;
+            ViewBag.FullName = $"{user.MiddleName} {user.FirstName}".Trim();
+            
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(string userId, string confirmAction)
+        {
+            if (string.IsNullOrEmpty(userId)) return NotFound();
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound();
+
+            // Mật khẩu mặc định khi reset
+            const string defaultPassword = "MedBooking@123";
+
+            // 1. Tạo token và reset mật khẩu
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, defaultPassword);
+
+            if (result.Succeeded)
+            {
+                // 2. 🔥 BẬT CỜ BẮT BUỘC ĐỔI MẬT KHẨU 🔥
+                user.MustChangePassword = true;
+
+                // 3. Mở khóa tài khoản (nếu đang bị khóa) để họ có thể đăng nhập lại
+                await _userManager.SetLockoutEndDateAsync(user, null);
+                user.LockoutReason = null;
+
+                await _userManager.UpdateAsync(user);
+
+                TempData["SuccessMessage"] = $"Đã reset mật khẩu cho tài khoản {user.Email}. Mật khẩu mới: {defaultPassword}. Người dùng sẽ phải đổi mật khẩu khi đăng nhập.";
+            }
+            else
+            {
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError("", error.Description);
+                }
+                ViewBag.Email = user.Email;
+                ViewBag.UserId = user.Id;
+                ViewBag.FullName = $"{user.MiddleName} {user.FirstName}".Trim();
+                return View();
+            }
+
             return RedirectToAction(nameof(Index));
         }
     }
