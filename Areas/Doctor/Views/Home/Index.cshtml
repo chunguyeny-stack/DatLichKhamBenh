@@ -1,0 +1,47 @@
+@{
+    ViewData["Title"] = "Dashboard Bác sĩ";
+    Layout = "~/Areas/Doctor/Views/Shared/_LayoutDoctor.cshtml";
+}
+
+<div class="card">
+    <div class="card-title">
+        <i class="fas fa-clock"></i> Danh sách bệnh nhân chờ khám
+    </div>
+    
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Giờ hẹn</th>
+                <th>Mã LH</th>
+                <th>Bệnh nhân</th>
+                <th>Triệu chứng</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dữ liệu giả lập, sau này sẽ load từ Database -->
+            <tr>
+                <td>08:30</td>
+                <td>LH001</td>
+                <td>Nguyễn Văn A</td>
+                <td>Đau họng, sốt</td>
+                <td>
+                    <a href="/Doctor/Examination/Index?id=1" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">
+                        <i class="fas fa-stethoscope"></i> Khám bệnh
+                    </a>
+                </td>
+            </tr>
+            <tr>
+                <td>09:00</td>
+                <td>LH002</td>
+                <td>Trần Thị B</td>
+                <td>Đau đầu, chóng mặt</td>
+                <td>
+                    <a href="/Doctor/Examination/Index?id=2" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">
+                        <i class="fas fa-stethoscope"></i> Khám bệnh
+                    </a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

@@ -1,195 +1,98 @@
 @{
-    ViewData["Title"] = "Khám bệnh & Hoàn thành ca";
+    ViewData["Title"] = "Khám bệnh & Kê đơn";
     Layout = "~/Areas/Doctor/Views/Shared/_LayoutDoctor.cshtml";
 }
 
-<style>
-    /* CSS tùy chỉnh cho trang khám bệnh */
-    .patient-info-card {
-        background-color: #f8f9fa;
-        border-left: 4px solid #198754; /* Màu xanh lá Bootstrap */
-        border-radius: 8px;
-    }
-    .form-section-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #198754;
-        border-bottom: 2px solid #e9ecef;
-        padding-bottom: 8px;
-        margin-bottom: 15px;
-    }
-    .table-thuoc input {
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-    }
-    .table-thuoc input:focus {
-        border-color: #198754;
-        box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
-    }
-    .btn-add-row {
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-</style>
-
-<div class="container-fluid py-4">
-    <!-- Tiêu đề trang -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-success m-0"><i class="bi bi-clipboard2-pulse me-2"></i>Phiếu Khám Bệnh</h2>
-        <span class="badge bg-secondary fs-6">Mã ca khám: #LH-00123</span>
+<!-- ĐOẠN CODE HIỂN THỊ THÔNG BÁO THÀNH CÔNG -->
+@if (TempData["SuccessMessage"] != null)
+{
+    <div style="background: #dcfce7; color: #15803d; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border: 1px solid #bbf7d0;">
+        <i class="fas fa-check-circle" style="font-size: 18px;"></i>
+        <strong>@TempData["SuccessMessage"]</strong>
     </div>
+}
 
-    <form>
-        <div class="row">
-            <!-- CỘT TRÁI: Thông tin bệnh nhân (Chỉ hiển thị, không cho sửa) -->
-            <div class="col-lg-4 mb-4">
-                <div class="card shadow-sm border-0 patient-info-card h-100">
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-3"><i class="bi bi-person-vcard me-2"></i>Thông tin Bệnh nhân</h5>
-                        
-                        <div class="mb-3">
-                            <label class="text-muted small d-block">Họ và tên</label>
-                            <span class="fw-bold fs-5">Nguyễn Văn A</span>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label class="text-muted small d-block">Năm sinh</label>
-                                <span class="fw-medium">1995 (29 tuổi)</span>
-                            </div>
-                            <div class="col-6">
-                                <label class="text-muted small d-block">Giới tính</label>
-                                <span class="fw-medium">Nam</span>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="text-muted small d-block">Số điện thoại</label>
-                            <span class="fw-medium">0987 654 321</span>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="text-muted small d-block">Lý do khám / Triệu chứng ban đầu</label>
-                            <div class="p-2 bg-white border rounded text-danger fw-medium mt-1">
-                                Đau họng, sốt cao 2 ngày nay, ho khan.
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<form action="/Doctor/Examination/Complete" method="POST">
+    <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+        
+        <!-- THÔNG TIN BỆNH NHÂN -->
+        <div style="flex: 1; min-width: 300px;">
+            <div class="card" style="border-left: 4px solid var(--primary);">
+                <h3 class="card-title"><i class="fas fa-user"></i> Thông tin Bệnh nhân</h3>
+                <p><strong>Họ tên:</strong> Nguyễn Văn A</p>
+                <p><strong>Tuổi:</strong> 29</p>
+                <p><strong>Triệu chứng:</strong> Đau họng, sốt cao.</p>
+                <hr style="margin: 15px 0; border-top: 1px dashed var(--border);">
+                <p><strong>Huyết áp:</strong> 120/80 mmHg</p>
+                <p><strong>Nhịp tim:</strong> 85 bpm</p>
+                <p><strong>Nhiệt độ:</strong> 38.5 °C</p>
             </div>
+        </div>
 
-            <!-- CỘT PHẢI: Form nhập kết quả khám -->
-            <div class="col-lg-8 mb-4">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body">
-                        
-                        <!-- 1. Kết quả lâm sàng & Chẩn đoán -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <div class="form-section-title">Kết quả lâm sàng</div>
-                                <textarea class="form-control" rows="4" placeholder="Nhập triệu chứng, sinh hiệu (huyết áp, nhịp tim...)"></textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-section-title">Chẩn đoán bệnh</div>
-                                <textarea class="form-control" rows="4" placeholder="Nhập chẩn đoán cuối cùng của bác sĩ..."></textarea>
-                            </div>
-                        </div>
+        <!-- FORM KHÁM BỆNH -->
+        <div style="flex: 2; min-width: 400px;">
+            <div class="card">
+                <div class="form-group">
+                    <label class="form-label">Kết quả lâm sàng <span style="color:red">*</span></label>
+                    <textarea class="form-control" name="KetQuaLamSang" required placeholder="Nhập kết quả..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chẩn đoán bệnh <span style="color:red">*</span></label>
+                    <textarea class="form-control" name="ChanDoan" required placeholder="Nhập chẩn đoán..."></textarea>
+                </div>
 
-                        <!-- 2. Chỉ định dịch vụ y tế -->
-                        <div class="mb-4">
-                            <div class="form-section-title">Chỉ định Dịch vụ Y tế</div>
-                            <div class="d-flex flex-wrap gap-4 p-3 bg-light rounded border">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="dv1">
-                                    <label class="form-check-label" for="dv1">Xét nghiệm máu (150.000đ)</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="dv2">
-                                    <label class="form-check-label" for="dv2">Siêu âm ổ bụng (200.000đ)</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="dv3">
-                                    <label class="form-check-label" for="dv3">Chụp X-Quang (250.000đ)</label>
-                                </div>
-                            </div>
-                        </div>
+                <h4 style="margin: 20px 0 10px; font-size: 15px;">Đơn thuốc</h4>
+                <table class="table" id="tblThuoc">
+                    <thead>
+                        <tr>
+                            <th>Tên thuốc</th>
+                            <th>Liều lượng</th>
+                            <th>Số lượng</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="text" class="form-control" name="DanhSachThuoc[0].TenThuoc" required></td>
+                            <td><input type="text" class="form-control" name="DanhSachThuoc[0].LieuLuong"></td>
+                            <td><input type="number" class="form-control" name="DanhSachThuoc[0].SoLuong" value="1"></td>
+                            <td><button type="button" class="btn btn-danger" onclick="removeRow(this)">Xóa</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <button type="button" class="btn btn-outline" style="margin-bottom: 20px;" onclick="addRow()"><i class="fas fa-plus"></i> Thêm thuốc</button>
 
-                        <!-- 3. Kê đơn thuốc (Dynamic Table) -->
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="form-section-title mb-0 border-0 pb-0">Đơn Thuốc</div>
-                                <button type="button" class="btn btn-sm btn-outline-success btn-add-row" onclick="addMedicineRow()">
-                                    <i class="bi bi-plus-circle me-1"></i> Thêm thuốc
-                                </button>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-hover align-middle table-thuoc" id="medicineTable">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 35%;">Tên thuốc <span class="text-danger">*</span></th>
-                                            <th style="width: 35%;">Liều lượng / Cách dùng</th>
-                                            <th style="width: 15%;">Số lượng</th>
-                                            <th style="width: 15%;" class="text-center">Thao tác</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Dòng 1 -->
-                                        <tr>
-                                            <td><input type="text" class="form-control" placeholder="VD: Paracetamol 500mg" required></td>
-                                            <td><input type="text" class="form-control" placeholder="VD: Ngày 2 lần, sáng tối"></td>
-                                            <td><input type="number" class="form-control" value="10" min="1"></td>
-                                            <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeMedicineRow(this)"><i class="bi bi-trash"></i></button></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                <div class="form-group">
+                    <label class="form-label">Lời dặn</label>
+                    <textarea class="form-control" name="LoiDan" rows="2"></textarea>
+                </div>
 
-                        <!-- 4. Lời dặn của bác sĩ -->
-                        <div class="mb-4">
-                            <div class="form-section-title">Lời dặn của Bác sĩ</div>
-                            <textarea class="form-control" rows="2" placeholder="VD: Uống thuốc đúng giờ, kiêng đồ lạnh, tái khám sau 5 ngày..."></textarea>
-                        </div>
-
-                        <!-- Nút Hoàn thành -->
-                        <div class="text-end border-top pt-3 mt-4">
-                            <button type="button" class="btn btn-light me-2 px-4 border">Hủy ca khám</button>
-                            <button type="button" class="btn btn-success px-4 fw-bold">
-                                <i class="bi bi-check-circle me-1"></i> Hoàn thành ca khám
-                            </button>
-                        </div>
-
-                    </div>
+                <div style="text-align: right;">
+                    <a href="/Doctor/Home/Index" class="btn btn-outline">Hủy</a>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Hoàn thành ca khám</button>
                 </div>
             </div>
         </div>
-    </form>
-</div>
+    </div>
+</form>
 
 @section Scripts {
     <script>
-        // Hàm thêm dòng thuốc mới
-        function addMedicineRow() {
-            const tableBody = document.querySelector('#medicineTable tbody');
-            const newRow = document.createElement('tr');
-            newRow.innerHTML = `
-                <td><input type="text" class="form-control" placeholder="Nhập tên thuốc..." required></td>
-                <td><input type="text" class="form-control" placeholder="Cách dùng..."></td>
-                <td><input type="number" class="form-control" value="1" min="1"></td>
-                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeMedicineRow(this)"><i class="bi bi-trash"></i></button></td>
+        let rowIdx = 1;
+        function addRow() {
+            let tbody = document.querySelector('#tblThuoc tbody');
+            let tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" class="form-control" name="DanhSachThuoc[${rowIdx}].TenThuoc" required></td>
+                <td><input type="text" class="form-control" name="DanhSachThuoc[${rowIdx}].LieuLuong"></td>
+                <td><input type="number" class="form-control" name="DanhSachThuoc[${rowIdx}].SoLuong" value="1"></td>
+                <td><button type="button" class="btn btn-danger" onclick="removeRow(this)">Xóa</button></td>
             `;
-            tableBody.appendChild(newRow);
+            tbody.appendChild(tr);
+            rowIdx++;
         }
-
-        // Hàm xóa dòng thuốc
-        function removeMedicineRow(button) {
-            const row = button.closest('tr');
-            // Không cho xóa nếu chỉ còn 1 dòng
-            if (document.querySelectorAll('#medicineTable tbody tr').length > 1) {
-                row.remove();
-            } else {
-                alert('Phải có ít nhất một loại thuốc trong đơn!');
-            }
+        function removeRow(btn) {
+            btn.closest('tr').remove();
         }
     </script>
 }

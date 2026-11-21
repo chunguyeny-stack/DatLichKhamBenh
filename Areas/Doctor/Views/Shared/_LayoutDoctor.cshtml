@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"] - MediSlot Bác sĩ</title>
+    <!-- Nhúng Font Awesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/BS.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="logo-icon">
+                    <!-- LOGO 4 TRÁI TIM CỦA BẠN -->
+                    <img src="~/images/logo.png" alt="MediSlot Logo">
+                </div>
+                <div>
+                    <div class="brand-name">MediSlot</div>
+                    <div class="brand-sub">Cổng Bác sĩ</div>
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/Doctor/Home/Index" class="nav-link"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="/Doctor/Examination/Index" class="nav-link"><i class="fas fa-stethoscope"></i> Khám bệnh</a></li>
+                <li><a href="/Doctor/LeaveRequest/Index" class="nav-link"><i class="fas fa-calendar-minus"></i> Xin nghỉ phép</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="avatar-sm">BS</div>
+                <div class="info">
+                    <strong>BS. Nguyễn Văn A</strong>
+                    <span>Nội Tổng Quát</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <div class="main-area">
+            <header class="topbar">
+                <div class="page-title">@ViewData["Title"]</div>
+                <div class="topbar-right">
+                    <!-- Chỉ giữ lại thông báo (chuông) và thông tin User -->
+                    <button class="icon-btn"><i class="fas fa-bell"></i></button>
+                    <div class="user-chip">
+                        <div class="avatar">BS</div>
+                        <span>BS. Nguyễn Văn A</span>
+                    </div>
+                </div>
+            </header>
+            <main class="content">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

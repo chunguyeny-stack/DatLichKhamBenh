@@ -1,0 +1,39 @@
+@{
+    ViewData["Title"] = "Xin nghỉ phép";
+    Layout = "~/Areas/Doctor/Views/Shared/_LayoutDoctor.cshtml";
+}
+
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <h2 class="card-title"><i class="fas fa-calendar-minus"></i> Gửi đơn xin nghỉ phép</h2>
+    
+    <div style="background: #e0f2fe; color: #0369a1; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <i class="fas fa-info-circle"></i> Bạn còn <strong>10/12 ngày phép</strong> trong năm nay.
+    </div>
+
+    <form action="/Doctor/LeaveRequest/Create" method="POST">
+        <div class="form-group">
+            <label class="form-label">Ngày xin nghỉ <span style="color:red">*</span></label>
+            <input type="date" class="form-control" name="NgayNghi" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">Ca nghỉ <span style="color:red">*</span></label>
+            <select class="form-control" name="CaNghi" required>
+                <option value="">-- Chọn ca --</option>
+                <option value="Sang">Ca Sáng</option>
+                <option value="Chieu">Ca Chiều</option>
+                <option value="Toi">Ca Tối</option>
+                <option value="CaNgay">Cả ngày</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Lý do xin nghỉ <span style="color:red">*</span></label>
+            <textarea class="form-control" name="LyDo" rows="4" required placeholder="Nhập lý do chi tiết..."></textarea>
+        </div>
+
+        <div style="text-align: right; margin-top: 20px;">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Gửi yêu cầu</button>
+        </div>
+    </form>
+</div>
