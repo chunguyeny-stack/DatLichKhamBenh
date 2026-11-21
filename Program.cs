@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using DatLichKhamBenh.Data;
+using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Data.Seed;
 using Microsoft.AspNetCore.Authentication.Google; // 🔥 ĐÃ MỞ KHÓA

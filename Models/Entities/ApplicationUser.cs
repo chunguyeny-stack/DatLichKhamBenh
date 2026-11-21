@@ -1,5 +1,8 @@
-using Microsoft.AspNetCore.Identity;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Identity;
 
 namespace DatLichKhamBenh.Models.Entities
 {
@@ -30,10 +33,13 @@ namespace DatLichKhamBenh.Models.Entities
         public string? LockoutReason { get; set; }
 
         // Navigation property (tùy chọn - nếu muốn truy cập ngược)
-        public Doctor? DoctorProfile { get; set; }
-        public Patient? PatientProfile { get; set; }
+        public BacSi? DoctorProfile { get; set; }
+        public BenhNhan? PatientProfile { get; set; }
 
         // Helper: Họ tên đầy đủ
         public string FullName => $"{MiddleName} {FirstName}".Trim();
+
+        [NotMapped]
+        public virtual ICollection<BacSi> BacSis { get; set; } = new List<BacSi>();
     }
 }

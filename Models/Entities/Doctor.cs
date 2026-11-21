@@ -1,55 +1,62 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DatLichKhamBenh.Models.Entities
 {
-    public class Doctor
+    [Table("bac_si")]
+    public class BacSi
     {
         [Key]
+        [Column("id")]
         public int Id { get; set; }
 
-        // Liên kết 1-1 với ApplicationUser
-        [Required]
-        public string UserId { get; set; } = null!;
+        [Column("nguoi_dung_id")]
+        public int NguoiDungId { get; set; }
 
-        [ForeignKey(nameof(UserId))]
-        public ApplicationUser User { get; set; } = null!;
+        [Column("application_user_id")]
+        public string? ApplicationUserId { get; set; }
 
-        // =====================================================
-        // LIÊN KẾT CHUYÊN KHOA (MỚI)
-        // =====================================================
-        [Display(Name = "Chuyên khoa")]
-        public int? SpecialtyId { get; set; } // Có thể null nếu chưa phân khoa
+        [ForeignKey(nameof(ApplicationUserId))]
+        public virtual ApplicationUser? ApplicationUser { get; set; }
 
-        [ForeignKey(nameof(SpecialtyId))]
-        public Specialty? Specialty { get; set; }
+        [Column("chuyen_khoa_id")]
+        public int ChuyenKhoaId { get; set; }
 
-        // =====================================================
-        // THÔNG TIN CHUYÊN MÔN (Giữ nguyên)
-        // =====================================================
-        [StringLength(100)]
-        [Display(Name = "Học vị / Chức danh")]
-        public string? Degree { get; set; } 
+        [ForeignKey(nameof(ChuyenKhoaId))]
+        public virtual ChuyenKhoa? ChuyenKhoa { get; set; }
 
-        [StringLength(1000)]
-        [Display(Name = "Giới thiệu")]
-        public string? Bio { get; set; }
+        [Column("hoc_vi")]
+        public string? HocVi { get; set; }
 
-        [Display(Name = "Số năm kinh nghiệm")]
-        [Range(0, 60, ErrorMessage = "Số năm kinh nghiệm không hợp lệ")]
-        public int? YearsOfExperience { get; set; }
+        [Column("kinh_nghiem")]
+        public string? KinhNghiem { get; set; }
 
-        [StringLength(200)]
-        [Display(Name = "Nơi công tác")]
-        public string? Workplace { get; set; }
+        [Column("gia_kham")]
+        public decimal GiaKham { get; set; }
 
-        // =====================================================
-        // TRẠNG THÁI
-        // =====================================================
-        [Display(Name = "Đang hoạt động")]
-        public bool IsActive { get; set; } = true;
+        [Column("rating")]
+        public double Rating { get; set; }
 
-        [Display(Name = "Ngày tạo")]
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        [Column("so_luong_danh_gia")]
+        public int SoLuongDanhGia { get; set; }
+
+        [Column("ho_ten")]
+        public string HoTen { get; set; } = string.Empty;
+
+        [Column("so_dien_thoai")]
+        public string? SoDienThoai { get; set; }
+
+        [Column("email")]
+        public string? Email { get; set; }
+
+        [Column("hinh_anh")]
+        public string? HinhAnh { get; set; }
+
+        [NotMapped]
+        public virtual ICollection<LichLamViec> LichLamViecs { get; set; } = new List<LichLamViec>();
+
+        [NotMapped]
+        public virtual ICollection<LichHen> LichHens { get; set; } = new List<LichHen>();
     }
 }

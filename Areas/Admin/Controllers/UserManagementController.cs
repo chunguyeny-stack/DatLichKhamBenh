@@ -1,10 +1,19 @@
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Models.ViewModels;
+<<<<<<< HEAD
 using Microsoft.EntityFrameworkCore;
 using DatLichKhamBenh.Data;
+=======
+>>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
 
 namespace DatLichKhamBenh.Areas.Admin.Controllers
 {
@@ -50,7 +59,13 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
         [HttpGet]
         public async Task<IActionResult> CreateStaff()
         {
+<<<<<<< HEAD
             ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
+=======
+            ViewBag.Specialties = await _context.ChuyenKhoas
+                .Where(s => s.TrangThai == "active")
+                .ToListAsync();
+>>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
             return View();
         }
 
@@ -60,22 +75,47 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
         {
             if (!ModelState.IsValid)
             {
-                ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
+                ViewBag.Specialties = await _context.ChuyenKhoas
+                    .Where(s => s.TrangThai == "active")
+                    .ToListAsync();
                 return View(model);
             }
 
             if (model.Role != "Doctor" && model.Role != "Receptionist")
             {
+<<<<<<< HEAD
                 ModelState.AddModelError("Role", "Vai trò không hợp lệ.");
                 ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
+=======
+                ModelState.AddModelError("Role", "Vai trò không hợp lệ. Chỉ chấp nhận Doctor hoặc Receptionist.");
+                ViewBag.Specialties = await _context.ChuyenKhoas
+                    .Where(s => s.TrangThai == "active")
+                    .ToListAsync();
+                return View(model);
+            }
+
+            if (model.Role == "Doctor" && (!model.SpecialtyId.HasValue || model.SpecialtyId.Value <= 0))
+            {
+                ModelState.AddModelError("SpecialtyId", "Vui lòng chọn chuyên khoa cho bác sĩ.");
+                ViewBag.Specialties = await _context.ChuyenKhoas
+                    .Where(s => s.TrangThai == "active")
+                    .ToListAsync();
+>>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
                 return View(model);
             }
 
             var existingUser = await _userManager.FindByEmailAsync(model.Email);
             if (existingUser != null)
             {
+<<<<<<< HEAD
                 ModelState.AddModelError("Email", "Email này đã được sử dụng.");
                 ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
+=======
+                ModelState.AddModelError("Email", "Email này đã được sử dụng trong hệ thống.");
+                ViewBag.Specialties = await _context.ChuyenKhoas
+                    .Where(s => s.TrangThai == "active")
+                    .ToListAsync();
+>>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
                 return View(model);
             }
 
@@ -96,9 +136,14 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             if (result.Succeeded)
             {
                 await _userManager.AddToRoleAsync(user, model.Role);
+<<<<<<< HEAD
+=======
+                _logger.LogInformation("Admin đã tạo tài khoản {Role}: {Email}", model.Role, model.Email);
+>>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
 
                 if (model.Role == "Doctor")
                 {
+<<<<<<< HEAD
                     _context.Doctors.Add(new DatLichKhamBenh.Models.Entities.Doctor
                     {
                         UserId = user.Id,
@@ -106,6 +151,16 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                         IsActive = true,
                         CreatedAt = DateTime.Now
                     });
+=======
+                    var doctorProfile = new BacSi
+                    {
+                        ApplicationUserId = user.Id,
+                        ChuyenKhoaId = model.SpecialtyId!.Value,
+                        HoTen = $"{model.MiddleName} {model.FirstName}".Trim(),
+                        Email = model.Email
+                    };
+                    _context.BacSis.Add(doctorProfile);
+>>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
                     await _context.SaveChangesAsync();
                 }
 
@@ -116,7 +171,9 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             foreach (var error in result.Errors)
                 ModelState.AddModelError(string.Empty, error.Description);
 
-            ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
+            ViewBag.Specialties = await _context.ChuyenKhoas
+                .Where(s => s.TrangThai == "active")
+                .ToListAsync();
             return View(model);
         }
 
