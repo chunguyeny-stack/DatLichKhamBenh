@@ -1,9 +1,13 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace DatLichKhamBenh.Models.ViewModels
 {
     public class CreateStaffViewModel : IValidatableObject
     {
+        public static readonly string[] AllowedRoles = { "Doctor", "Receptionist" };
+
         [Required(ErrorMessage = "Vui lòng nhập họ đệm")]
         [StringLength(50, ErrorMessage = "Họ đệm không được vượt quá 50 ký tự")]
         [Display(Name = "Họ đệm")]
@@ -29,6 +33,14 @@ namespace DatLichKhamBenh.Models.ViewModels
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
+            if (!AllowedRoles.Contains(Role))
+            {
+                yield return new ValidationResult(
+                    "Vai trò được chọn không hợp lệ. Chỉ chấp nhận Bác sĩ hoặc Lễ tân.",
+                    new[] { nameof(Role) });
+                yield break;
+            }
+
             if (Role == "Doctor" && (SpecialtyId == null || SpecialtyId <= 0))
             {
                 yield return new ValidationResult(

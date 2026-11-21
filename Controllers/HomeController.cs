@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using DatLichKhamBenh.Models.Entities;
 
 namespace DatLichKhamBenh.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -15,6 +17,7 @@ namespace DatLichKhamBenh.Controllers
 
         // GET: / (Trang chủ)
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult Index()
         {
             // Nếu đã đăng nhập, điều hướng về đúng dashboard theo role

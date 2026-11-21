@@ -1,427 +1,413 @@
+using DatLichKhamBenh.Models.Entities;
+using DatLichKhamBenh.Models.ViewModels;
+using DatLichKhamBenh.Services.Interfaces;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using DatLichKhamBenh.Models.Entities;
-using DatLichKhamBenh.Models.ViewModels;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Configuration;
 
-namespace DatLichKhamBenh.Controllers
+[Authorize]
+public class AccountController : Controller
 {
-    public class AccountController : Controller
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly IAuthService _authService;
+    private readonly ILogger<AccountController> _logger;
+    private readonly IConfiguration _configuration;
+
+    public AccountController(
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        IAuthService authService,
+        ILogger<AccountController> logger,
+        IConfiguration configuration)
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly ILogger<AccountController> _logger;
-        private readonly RoleManager<IdentityRole> _roleManager;
+        _userManager = userManager;
+        _signInManager = signInManager;
+        _authService = authService;
+        _logger = logger;
+        _configuration = configuration;
+    }
 
-        public AccountController(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            ILogger<AccountController> logger,
-            RoleManager<IdentityRole> roleManager)
+    // ---------- LOGIN ----------
+    [AllowAnonymous]
+    [HttpGet]
+    public IActionResult Login(string? returnUrl = null)
+    {
+        ViewData["ReturnUrl"] = returnUrl;
+        return View();
+    }
+
+    [AllowAnonymous]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("login")]     // ← Rate limit
+    public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
+    {
+        ViewData["ReturnUrl"] = returnUrl;
+        if (!ModelState.IsValid) return View(model);
+
+        var result = await _authService.LoginAsync(model);
+        if (result.Success)
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _logger = logger;
-            _roleManager = roleManager;
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null && user.MustChangePassword)
+                return RedirectToAction(nameof(ChangePassword));
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return LocalRedirect(returnUrl);
+            return await RedirectToRoleDashboardAsync(user);
         }
+        ModelState.AddModelError("", result.Message);
+        return View(model);
+    }
 
-        // =====================================================
-        // 1. ĐĂNG NHẬP
-        // =====================================================
+    // ---------- CHANGE PASSWORD ----------
+    [HttpGet]
+    public async Task<IActionResult> ChangePassword()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null) return RedirectToAction(nameof(Login));
 
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult Login(string? returnUrl = null)
+        ViewBag.IsFirstLogin = user.MustChangePassword;
+        return View(new ChangePasswordViewModel());
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Profile()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null) return RedirectToAction(nameof(Login));
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var model = new ProfileViewModel
         {
-            ViewData["ReturnUrl"] = returnUrl;
-            return View();
-        }
+            FirstName = user.FirstName ?? string.Empty,
+            MiddleName = user.MiddleName ?? string.Empty,
+            Email = user.Email ?? string.Empty,
+            PhoneNumber = user.PhoneNumber,
+            DateOfBirth = user.DateOfBirth,
+            RoleName = roles.FirstOrDefault() ?? string.Empty
+        };
 
-        [HttpPost]
-        [AllowAnonymous]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateProfile(ProfileViewModel model)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null) return RedirectToAction(nameof(Login));
+
+        model.Email = user.Email ?? string.Empty;
+        var roles = await _userManager.GetRolesAsync(user);
+        model.RoleName = roles.FirstOrDefault() ?? string.Empty;
+
+        if (!ModelState.IsValid)
+            return View("Profile", model);
+
+        user.MiddleName = model.MiddleName.Trim();
+        user.FirstName = model.FirstName.Trim();
+        user.PhoneNumber = string.IsNullOrWhiteSpace(model.PhoneNumber) ? null : model.PhoneNumber.Trim();
+        user.DateOfBirth = model.DateOfBirth;
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
         {
-            ViewData["ReturnUrl"] = returnUrl;
-            if (!ModelState.IsValid)
-                return View(model);
-
-            var user = await _userManager.FindByEmailAsync(model.Email);
-
-            // BƯỚC 1: Kiểm tra tài khoản có bị Admin khóa không (LockoutEnd > Now)
-            if (user != null && user.LockoutEnd != null && user.LockoutEnd > DateTimeOffset.Now)
-            {
-                ModelState.AddModelError(string.Empty,
-                    $"Tài khoản đã bị khóa. Lý do: {user.LockoutReason ?? "Không có lý do cụ thể"}");
-                return View(model);
-            }
-
-            // BƯỚC 2: Xác thực mật khẩu
-            var result = await _signInManager.PasswordSignInAsync(
-                user?.UserName ?? model.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
-
-            if (result.Succeeded)
-            {
-                _logger.LogInformation($"Người dùng {model.Email} đăng nhập thành công.");
-
-                // BƯỚC 3: Nếu là lần đầu đăng nhập (Admin tạo TK hoặc reset MK) → Bắt buộc đổi MK
-                if (user != null && user.MustChangePassword)
-                {
-                    return RedirectToAction(nameof(ChangePassword));
-                }
-
-                // BƯỚC 4: Điều hướng theo Role
-                if (user != null)
-                {
-                    if (await _userManager.IsInRoleAsync(user, "Admin"))
-                        return RedirectToAction("Index", "UserManagement", new { area = "Admin" });
-                    if (await _userManager.IsInRoleAsync(user, "Doctor"))
-                        return RedirectToAction("Index", "Doctor", new { area = "Doctor" });
-                    if (await _userManager.IsInRoleAsync(user, "Receptionist"))
-                        return RedirectToAction("Index", "Receptionist", new { area = "Receptionist" });
-                }
-
-                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-                    return Redirect(returnUrl);
-
-                return RedirectToAction("Index", "Home");
-            }
-
-            if (result.IsLockedOut)
-            {
-                ModelState.AddModelError(string.Empty,
-                    "Tài khoản đã bị khóa tạm thời do đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.");
-            }
-            else
-            {
-                ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không đúng.");
-            }
-
-            return View(model);
-        }
-
-        // =====================================================
-        // 2. ĐĂNG KÝ (Dành cho Bệnh nhân)
-        // =====================================================
-
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult Register()
-        {
-            return View();
-        }
-
-        [HttpPost]
-        [AllowAnonymous]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel model)
-        {
-            if (!ModelState.IsValid)
-                return View(model);
-
-            var existingUser = await _userManager.FindByEmailAsync(model.Email);
-            if (existingUser != null)
-            {
-                ModelState.AddModelError("Email", "Email này đã được sử dụng.");
-                return View(model);
-            }
-
-            var user = new ApplicationUser
-            {
-                UserName = model.Email,
-                Email = model.Email,
-                FirstName = model.FirstName,
-                MiddleName = model.MiddleName,
-                PhoneNumber = model.PhoneNumber,
-                DateOfBirth = model.DateOfBirth,
-                EmailConfirmed = true,
-                MustChangePassword = false // Bệnh nhân tự đăng ký → không ép đổi MK
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password);
-
-            if (result.Succeeded)
-            {
-                await _userManager.AddToRoleAsync(user, "Patient");
-                _logger.LogInformation($"Bệnh nhân mới đăng ký: {model.Email}");
-
-                await _signInManager.SignInAsync(user, isPersistent: false);
-                TempData["SuccessMessage"] = "Đăng ký thành công! Chào mừng bạn đến với MediSlot.";
-                return RedirectToAction("Index", "Home");
-            }
-
             foreach (var error in result.Errors)
                 ModelState.AddModelError(string.Empty, error.Description);
+            return View("Profile", model);
+        }
 
+        await _userManager.UpdateSecurityStampAsync(user);
+        TempData["Success"] = "Cập nhật thông tin thành công.";
+        return RedirectToAction(nameof(Profile));
+    }
+
+    [AllowAnonymous]
+    [HttpGet]
+    public async Task<IActionResult> ConfirmEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return RedirectToAction(nameof(Register));
+
+        ViewBag.Email = email;
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user != null && user.EmailConfirmed)
+        {
+            TempData["Success"] = "Email đã được xác thực.";
+            return RedirectToAction(nameof(Login));
+        }
+        return View();
+    }
+
+    [AllowAnonymous]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmEmail(string email, string otp)
+    {
+        var result = await _authService.VerifyEmailOtpAsync(email, otp);
+        if (!result.Success)
+        {
+            ModelState.AddModelError(string.Empty, result.Message);
+            ViewBag.Email = email;
+            return View();
+        }
+
+        TempData["Success"] = result.Message;
+        return RedirectToAction(nameof(Login));
+    }
+
+    [AllowAnonymous]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResendOtp(string email)
+    {
+        var result = await _authService.ResendEmailOtpAsync(email);
+        TempData[result.Success ? "Success" : "Error"] = result.Message;
+        return RedirectToAction(nameof(ConfirmEmail), new { email });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null) return RedirectToAction(nameof(Login));
+
+        if (!ModelState.IsValid)
+        {
+            ViewBag.IsFirstLogin = user.MustChangePassword;
             return View(model);
         }
 
-        // =====================================================
-        // 3. ĐĂNG XUẤT
-        // =====================================================
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Logout()
+        var result = await _authService.ChangePasswordAsync(user.Id, model);
+        if (!result.Success)
         {
-            await _signInManager.SignOutAsync();
-            _logger.LogInformation("Người dùng đã đăng xuất.");
-            return RedirectToAction("Index", "Home");
-        }
-
-        // =====================================================
-        // 4. TRANG TỪ CHỐI TRUY CẬP
-        // =====================================================
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult AccessDenied()
-        {
-            return View();
-        }
-
-        // =====================================================
-        // 5. THÔNG TIN CÁ NHÂN
-        // =====================================================
-
-        [HttpGet]
-        [Authorize]
-        public async Task<IActionResult> Profile()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return Challenge();
-
-            var roles = await _userManager.GetRolesAsync(user);
-            var roleName = roles.FirstOrDefault() switch
-            {
-                "Admin" => "Quản trị viên",
-                "Doctor" => "Bác sĩ",
-                "Receptionist" => "Lễ tân",
-                "Patient" => "Bệnh nhân",
-                _ => "Người dùng"
-            };
-
-            var model = new ProfileViewModel
-            {
-                MiddleName = user.MiddleName ?? string.Empty,
-                FirstName = user.FirstName ?? string.Empty,
-                Email = user.Email ?? string.Empty,
-                PhoneNumber = user.PhoneNumber ?? string.Empty,
-                RoleName = roleName,
-                DateOfBirth = user.DateOfBirth
-            };
-
+            ModelState.AddModelError("", result.Message);
+            ViewBag.IsFirstLogin = user.MustChangePassword;
             return View(model);
         }
 
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateProfile(ProfileViewModel model)
+        TempData["Success"] = "Đổi mật khẩu thành công.";
+        return RedirectToAction("Index", "Home");
+    }
+
+    [AllowAnonymous]
+    [HttpGet]
+    public IActionResult Register() => View(new RegisterViewModel());
+
+    [AllowAnonymous]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Register(RegisterViewModel model)
+    {
+        if (!ModelState.IsValid) return View(model);
+        var result = await _authService.RegisterAsync(model);
+        if (!result.Success)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return Challenge();
-
-            user.MiddleName = model.MiddleName;
-            user.FirstName = model.FirstName;
-            user.PhoneNumber = model.PhoneNumber;
-            user.DateOfBirth = model.DateOfBirth;
-
-            var result = await _userManager.UpdateAsync(user);
-
-            if (result.Succeeded)
-            {
-                TempData["SuccessMessage"] = "Cập nhật thông tin cá nhân thành công.";
-            }
-            else
-            {
-                foreach (var error in result.Errors)
-                    ModelState.AddModelError(string.Empty, error.Description);
-                return View("Profile", model);
-            }
-
-            return RedirectToAction(nameof(Profile));
+            ModelState.AddModelError("", result.Message);
+            return View(model);
         }
+        TempData["Success"] = result.Message;
+        return RedirectToAction(nameof(ConfirmEmail), new { email = model.Email });
+    }
 
-        // =====================================================
-        // 6. ĐỔI MẬT KHẨU (Có validate bảo mật)
-        // =====================================================
+    [AllowAnonymous]
+    [HttpGet]
+    public IActionResult ForgotPassword() => View();
 
-        [HttpGet]
-        [Authorize]
-        public IActionResult ChangePassword()
+    [AllowAnonymous]
+    [HttpGet]
+    public IActionResult AccessDenied() => View();
+
+    // ---------- FORGOT PASSWORD ----------
+    [AllowAnonymous]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("forgot")]     // ← Rate limit
+    public async Task<IActionResult> ForgotPassword(string email)
+    {
+        if (!string.IsNullOrWhiteSpace(email))
         {
-            return View();
-        }
-
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
-        {
-            if (!ModelState.IsValid)
-                return View(model);
-
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return Challenge();
-
-            // Chặn dùng lại mật khẩu mặc định nếu đang bị ép đổi
-            if (user.MustChangePassword && model.NewPassword == "MedBooking@123")
-            {
-                ModelState.AddModelError("NewPassword",
-                    "Không được dùng lại mật khẩu mặc định. Vui lòng chọn mật khẩu khác.");
-                return View(model);
-            }
-
-            var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
-
-            if (!result.Succeeded)
-            {
-                foreach (var error in result.Errors)
-                    ModelState.AddModelError(string.Empty, error.Description);
-                return View(model);
-            }
-
-            // Tắt cờ MustChangePassword sau khi đổi thành công
-            if (user.MustChangePassword)
-            {
-                user.MustChangePassword = false;
-                await _userManager.UpdateAsync(user);
-            }
-
-            await _signInManager.RefreshSignInAsync(user);
-
-            TempData["SuccessMessage"] = "Đổi mật khẩu thành công!";
-            
-            // Điều hướng về Dashboard tương ứng sau khi đổi MK xong
-            if (await _userManager.IsInRoleAsync(user, "Admin"))
-                return RedirectToAction("Index", "UserManagement", new { area = "Admin" });
-            if (await _userManager.IsInRoleAsync(user, "Doctor"))
-                return RedirectToAction("Index", "Doctor", new { area = "Doctor" });
-            if (await _userManager.IsInRoleAsync(user, "Receptionist"))
-                return RedirectToAction("Index", "Receptionist", new { area = "Receptionist" });
-                
-            return RedirectToAction(nameof(Profile));
-        }
-
-        // =====================================================
-        // 7. QUÊN MẬT KHẨU (MỚI THÊM)
-        // =====================================================
-
-        // GET: /Account/ForgotPassword
-        [HttpGet]
-        [AllowAnonymous]
-        public IActionResult ForgotPassword()
-        {
-            return View();
-        }
-
-        // POST: /Account/ForgotPassword
-        [HttpPost]
-        [AllowAnonymous]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ForgotPassword(string email)
-        {
-            if (string.IsNullOrEmpty(email))
-            {
-                ModelState.AddModelError("", "Vui lòng nhập Email.");
-                return View();
-            }
-
             var user = await _userManager.FindByEmailAsync(email);
-            
             if (user != null)
             {
-                // TODO: Thực tế có thể gửi email thông báo cho Admin tại đây
-                // Ví dụ: await _emailSender.SendEmailAsync("admin@medislot.com", ...);
-                
-                // Ghi log để Admin có thể xem trong Output Console của Visual Studio
-                _logger.LogWarning($"[YÊU CẦU RESET MK] Người dùng '{email}' vừa yêu cầu cấp lại mật khẩu.");
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var callbackUrl = Url.Action(
+                    nameof(ResetPassword),
+                    "Account",
+                    new { userId = user.Id, token },
+                    Request.Scheme);
+                await HttpContext.RequestServices
+                    .GetRequiredService<DatLichKhamBenh.Services.Interfaces.IEmailService>()
+                    .SendAsync(email, "Đặt lại mật khẩu MediSlot",
+                        $"<p>Nhấn <a href=\"{callbackUrl}\">vào đây</a> để đặt lại mật khẩu.</p>");
             }
+        }
 
-            // Luôn hiển thị thông báo thành công chung để tránh bị dò quét tài khoản
-            TempData["SuccessMessage"] = "Yêu cầu đã được gửi. Vui lòng liên hệ Admin (Hotline: 1900xxxx) để được cấp lại mật khẩu.";
-            
+        TempData["SuccessMessage"] =
+            "Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.";
+        return RedirectToAction(nameof(ForgotPassword));
+    }
+
+    [AllowAnonymous]
+    [HttpGet]
+    public async Task<IActionResult> ResetPassword(string userId, string token)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+            return RedirectToAction(nameof(Login));
+
+        ViewBag.UserId = userId;
+        ViewBag.Token = token;
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return RedirectToAction(nameof(Login));
+        return View();
+    }
+
+    [AllowAnonymous]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPassword(string userId, string token, string password, string confirmPassword)
+    {
+        if (password != confirmPassword)
+        {
+            ModelState.AddModelError(string.Empty, "Mật khẩu xác nhận không khớp.");
+            ViewBag.UserId = userId;
+            ViewBag.Token = token;
+            return View();
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+            return RedirectToAction(nameof(Login));
+
+        var result = await _userManager.ResetPasswordAsync(user, token, password);
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+                ModelState.AddModelError(string.Empty, error.Description);
+            ViewBag.UserId = userId;
+            ViewBag.Token = token;
+            return View();
+        }
+
+        user.MustChangePassword = false;
+        await _userManager.UpdateAsync(user);
+        await _userManager.UpdateSecurityStampAsync(user);
+        TempData["Success"] = "Đặt lại mật khẩu thành công.";
+        return RedirectToAction(nameof(Login));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Logout()
+    {
+        await _signInManager.SignOutAsync();
+        TempData["Success"] = "Bạn đã đăng xuất.";
+        return RedirectToAction(nameof(Login));
+    }
+
+    [AllowAnonymous]
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ExternalLogin(string provider, string? returnUrl = null)
+    {
+        if (string.IsNullOrWhiteSpace(_configuration["Authentication:Google:ClientId"])
+            || string.IsNullOrWhiteSpace(_configuration["Authentication:Google:ClientSecret"]))
+        {
+            TempData["Error"] = "Tính năng đăng nhập bằng Google chưa được cấu hình.";
             return RedirectToAction(nameof(Login));
         }
 
-        // =====================================================
-        // 8. ĐĂNG NHẬP BẰNG GOOGLE (External Login)
-        // =====================================================
-
-        [HttpPost]
-        [AllowAnonymous]
-        [ValidateAntiForgeryToken]
-        public IActionResult ExternalLogin(string provider, string? returnUrl = null)
+        try
         {
+            var schemes = await _signInManager.GetExternalAuthenticationSchemesAsync();
+            if (!schemes.Any(scheme => scheme.Name == provider))
+            {
+                TempData["Error"] = "Tính năng đăng nhập bằng Google chưa được cấu hình.";
+                return RedirectToAction(nameof(Login));
+            }
+
             var redirectUrl = Url.Action(nameof(ExternalLoginCallback), "Account", new { returnUrl });
             var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
             return Challenge(properties, provider);
         }
-
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> ExternalLoginCallback(string? returnUrl = null, string? remoteError = null)
+        catch (Exception ex)
         {
-            if (remoteError != null)
-            {
-                ModelState.AddModelError(string.Empty, $"Lỗi từ nhà cung cấp: {remoteError}");
-                return View("Login");
-            }
+            _logger.LogError(ex, "Không thể bắt đầu đăng nhập ngoài bằng {Provider}.", provider);
+            TempData["Error"] = "Không thể bắt đầu đăng nhập bằng Google. Vui lòng thử lại sau.";
+            return RedirectToAction(nameof(Login));
+        }
+    }
 
+    [AllowAnonymous]
+    [HttpGet]
+    public async Task<IActionResult> ExternalLoginCallback(
+        string? returnUrl = null,
+        string? remoteError = null,
+        string? error = null)
+    {
+        var authenticationError = remoteError ?? error;
+        if (!string.IsNullOrWhiteSpace(authenticationError))
+        {
+            _logger.LogWarning("Đăng nhập Google thất bại: {RemoteError}", authenticationError);
+            TempData["Error"] = "Đăng nhập bằng Google không thành công. Vui lòng thử lại.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        try
+        {
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
+            {
+                TempData["Error"] = "Không nhận được thông tin đăng nhập từ Google. Vui lòng thử lại.";
                 return RedirectToAction(nameof(Login));
+            }
 
             var result = await _signInManager.ExternalLoginSignInAsync(
                 info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
 
             if (result.Succeeded)
             {
-                // Kiểm tra cờ MustChangePassword (dành cho trường hợp hy hữu)
-                var existingUser = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-                if (existingUser != null && existingUser.MustChangePassword)
+                var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+                if (user?.MustChangePassword == true)
                     return RedirectToAction(nameof(ChangePassword));
 
-                return RedirectToAction("Index", "Home");
+                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                    return LocalRedirect(returnUrl);
+                return await RedirectToRoleDashboardAsync(user);
             }
 
-            var email = info.Principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(email))
-            {
-                ModelState.AddModelError(string.Empty, "Không lấy được email từ Google.");
-                return View("Login");
-            }
-
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-            {
-                user = new ApplicationUser
-                {
-                    UserName = email,
-                    Email = email,
-                    EmailConfirmed = true,
-                    FirstName = info.Principal.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? "Người dùng",
-                    MiddleName = info.Principal.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value,
-                    MustChangePassword = false
-                };
-                var createResult = await _userManager.CreateAsync(user);
-                if (!createResult.Succeeded)
-                {
-                    foreach (var e in createResult.Errors)
-                        ModelState.AddModelError(string.Empty, e.Description);
-                    return View("Login");
-                }
-                await _userManager.AddToRoleAsync(user, "Patient");
-            }
-
-            await _userManager.AddLoginAsync(user, info);
-            await _signInManager.SignInAsync(user, isPersistent: false);
-
-            TempData["SuccessMessage"] = "Đăng nhập bằng Google thành công!";
-            return RedirectToAction("Index", "Home");
+            TempData["Error"] = result.IsLockedOut
+                ? "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên."
+                : "Tài khoản Google chưa được liên kết với tài khoản MediSlot.";
+            return RedirectToAction(nameof(Login));
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi xử lý callback đăng nhập Google.");
+            TempData["Error"] = "Không thể hoàn tất đăng nhập bằng Google. Vui lòng thử lại sau.";
+            return RedirectToAction(nameof(Login));
+        }
+    }
+
+    private async Task<IActionResult> RedirectToRoleDashboardAsync(ApplicationUser? user)
+    {
+        if (user == null)
+            return RedirectToAction(nameof(Login));
+
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Contains("Admin"))
+            return RedirectToAction("Index", "UserManagement", new { area = "Admin" });
+        if (roles.Contains("Doctor"))
+            return RedirectToAction("Index", "Doctor", new { area = "Doctor" });
+        if (roles.Contains("Receptionist"))
+            return RedirectToAction("Index", "Receptionist", new { area = "Receptionist" });
+
+        return RedirectToAction("Index", "Home");
     }
 }

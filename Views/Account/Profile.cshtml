@@ -13,10 +13,8 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        /* CSS Toàn trang */
         body { background-color: #f3f2f1; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
 
-        /* --- THANH ĐIỀU HƯỚNG NGANG (NAVBAR) --- */
         .top-navbar {
             background-color: #ffffff;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
@@ -49,7 +47,8 @@
             list-style: none;
         }
 
-        .navbar-menu li a {
+        .navbar-menu li a,
+        .navbar-menu li button.nav-logout-btn {
             color: #1b1b1b;
             text-decoration: none;
             font-size: 0.95rem;
@@ -58,54 +57,54 @@
             align-items: center;
             gap: 8px;
             transition: color 0.2s;
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
         }
 
         .navbar-menu li a:hover, .navbar-menu li a.active {
             color: #0067b8;
         }
 
-        /* --- NỘI DUNG CHÍNH --- */
         .main-content {
             max-width: 1000px;
             margin: 40px auto;
             padding: 0 20px;
         }
 
-        /* Header thông tin cá nhân */
         .page-title { font-size: 1.8rem; font-weight: 600; margin-bottom: 30px; color: #1b1b1b; }
         .header-info { display: flex; align-items: center; gap: 30px; margin-bottom: 40px; }
-        
-        .avatar-large { 
-            width: 130px; height: 130px; background-color: #b0bec5; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 3.5rem; color: #fff; font-weight: bold; position: relative; 
+
+        .avatar-large {
+            width: 130px; height: 130px; background-color: #b0bec5; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3.5rem; color: #fff; font-weight: bold; position: relative;
         }
-        .edit-avatar-icon { 
-            position: absolute; bottom: 5px; right: 5px; background: #fff; border-radius: 50%; 
-            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer; 
+        .edit-avatar-icon {
+            position: absolute; bottom: 5px; right: 5px; background: #fff; border-radius: 50%;
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); cursor: pointer;
         }
-        
+
         .header-text h2 { margin: 0 0 5px 0; font-size: 1.8rem; font-weight: 600; }
         .header-text p { margin: 0; color: #555; font-size: 0.95rem; }
 
-        /* Khối Card thông tin */
-        .info-card { 
-            background: #fff; border: 1px solid #e1dfdd; border-radius: 4px; 
+        .info-card {
+            background: #fff; border: 1px solid #e1dfdd; border-radius: 4px;
             box-shadow: 0 1.6px 3.6px 0 rgba(0,0,0,0.13); margin-bottom: 20px;
         }
         .card-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e1dfdd; }
         .card-header h3 { margin: 0; font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-        
+
         .card-body { padding: 20px; }
         .helper-text { font-size: 0.85rem; color: #666; margin-bottom: 20px; }
-        
+
         .info-row { display: flex; padding: 12px 0; border-bottom: 1px solid #f3f2f1; font-size: 0.95rem; align-items: center;}
         .info-row:last-child { border-bottom: none; }
         .info-label { width: 200px; font-weight: 600; color: #1b1b1b; }
         .info-value { flex: 1; color: #555; }
 
-        /* --- NÚT LƯU THAY ĐỔI MÀU TRẮNG --- */
         .btn-save {
             background-color: #ffffff;
             color: #0067b8;
@@ -121,22 +120,30 @@
             border-color: #005da6;
         }
     </style>
+    <link rel="stylesheet" href="~/css/account.css" asp-append-version="true" />
 </head>
-<body>
+<body class="account-profile-page">
 
-    <!-- THANH ĐIỀU HƯỚNG NGANG -->
+    @if (Model is null)
+    {
+        <div class="main-content">
+            <div class="alert alert-danger" role="alert">
+                Không thể tải thông tin cá nhân. Vui lòng đăng nhập lại.
+            </div>
+        </div>
+    }
+    else
+    {
     <nav class="top-navbar">
-        <!-- Logo -->
         <a class="navbar-brand" asp-controller="Home" asp-action="Index">
             <img src="~/images/logo.png" alt="Logo" />
             MediSlot
         </a>
 
-        <!-- Menu ngang -->
         <ul class="navbar-menu">
             <li>
-                <a href="javascript:history.back()">
-                    <i class="bi bi-arrow-left-circle"></i> Quay lại
+                <a asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-arrow-left-circle"></i> Trang chủ
                 </a>
             </li>
             <li>
@@ -150,23 +157,21 @@
                 </a>
             </li>
             <li>
-                <form asp-controller="Account" asp-action="Logout" method="post" id="logoutForm" class="m-0">
-                    <a href="javascript:document.getElementById('logoutForm').submit();">
-                        <i class="bi bi-box-arrow-right text-danger"></i> <span class="text-danger">Đăng xuất</span>
-                    </a>
+                <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                    <button type="submit" class="nav-logout-btn text-danger">
+                        <i class="bi bi-box-arrow-right text-danger"></i> <span>Đăng xuất</span>
+                    </button>
                 </form>
             </li>
         </ul>
     </nav>
 
-    <!-- NỘI DUNG CHÍNH -->
     <div class="main-content">
         <h1 class="page-title">Thông tin cá nhân</h1>
 
-        <!-- Khối Avatar và Tên -->
         <div class="header-info">
             <div class="avatar-large">
-                @(Model.FirstName?.Substring(0,1).ToUpper() ?? "U")
+                @(!string.IsNullOrEmpty(Model.FirstName) ? Model.FirstName[..1].ToUpper() : "U")
                 <div class="edit-avatar-icon" title="Thay đổi ảnh">
                     <i class="bi bi-pencil" style="color: #1b1b1b; font-size: 0.9rem;"></i>
                 </div>
@@ -178,15 +183,14 @@
             </div>
         </div>
 
-        <!-- Khối cập nhật thông tin -->
         <div class="info-card">
             <div class="card-header">
                 <h3><i class="bi bi-person"></i> Thông tin liên hệ</h3>
                 <i class="bi bi-chevron-up"></i>
             </div>
             <div class="card-body">
-                <p class="helper-text">Để cập nhật tên và chức danh của bạn, vui lòng liên hệ với Admin. Bạn có thể tự cập nhật số điện thoại và địa chỉ bên dưới.</p>
-                
+                <p class="helper-text">Để cập nhật tên và chức danh của bạn, vui lòng liên hệ với Admin. Bạn có thể tự cập nhật số điện thoại và thông tin bên dưới.</p>
+
                 <form asp-action="UpdateProfile" method="post">
                     <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
@@ -215,8 +219,7 @@
                             <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                         </div>
                     </div>
-                    
-                    <!-- Tự động hiện Ngày sinh nếu là Bệnh nhân -->
+
                     @if (Model.DateOfBirth != null || Model.RoleName == "Bệnh nhân")
                     {
                         <div class="info-row">
@@ -228,14 +231,16 @@
                     }
 
                     <div class="text-start mt-4">
-                        <!-- Nút màu trắng chữ xanh -->
                         <button type="submit" class="btn btn-save">Lưu thay đổi</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+    }
 
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
 </body>
 </html>

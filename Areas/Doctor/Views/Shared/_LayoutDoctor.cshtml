@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@(ViewData["Title"] ?? "Bác sĩ") - MediSlot</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary px-3">
+        <span class="navbar-brand">MediSlot - Bác sĩ</span>
+        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+            @Html.AntiForgeryToken()
+            <button class="btn btn-light btn-sm" type="submit">Đăng xuất</button>
+        </form>
+    </nav>
+    <main class="container py-4">
+        @RenderBody()
+    </main>
+</body>
+</html>

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,16 +12,22 @@ using Microsoft.Extensions.DependencyInjection;
 using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
 >>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
+=======
+using DatLichKhamBenh.Models.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+>>>>>>> 5b38487 (L5_B5: Fix: Luồng MCV và đồng nhất giao diện)
 
 namespace DatLichKhamBenh.Data.Seed
 {
     public static class DbInitializer
     {
-        public static async Task SeedDataAsync(IServiceProvider serviceProvider)
+        public static async Task SeedDataAsync(IServiceProvider serviceProvider, IWebHostEnvironment env)
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 
@@ -53,38 +60,43 @@ namespace DatLichKhamBenh.Data.Seed
             // ==========================================
             string[] roleNames = { "Admin", "Doctor", "Receptionist", "Patient" };
 >>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
+=======
+            var config = serviceProvider.GetRequiredService<IConfiguration>();
+            var logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Seeder");
+>>>>>>> 5b38487 (L5_B5: Fix: Luồng MCV và đồng nhất giao diện)
 
-            // 0. TẠO DỮ LIỆU MẪU CHUYÊN KHOA
+            // 0. SPECIALTIES
             if (!await context.Specialties.AnyAsync())
             {
-                var specialties = new List<Specialty>
-                {
-                    new Specialty { Name = "Tim mạch", Description = "Khám và điều trị các bệnh về tim mạch", IsActive = true },
-                    new Specialty { Name = "Nhi khoa", Description = "Khám và điều trị bệnh cho trẻ em", IsActive = true },
-                    new Specialty { Name = "Da liễu", Description = "Khám và điều trị các bệnh về da", IsActive = true },
-                    new Specialty { Name = "Răng Hàm Mặt", Description = "Khám và điều trị răng miệng", IsActive = true },
-                    new Specialty { Name = "Tai Mũi Họng", Description = "Khám và điều trị bệnh tai mũi họng", IsActive = true }
-                };
-                context.Specialties.AddRange(specialties);
+                context.Specialties.AddRange(
+                    new Specialty { Name = "Tim mạch", Description = "Khám và điều trị bệnh tim mạch" },
+                    new Specialty { Name = "Nhi khoa", Description = "Khám và điều trị bệnh cho trẻ em" },
+                    new Specialty { Name = "Da liễu", Description = "Khám và điều trị bệnh về da" },
+                    new Specialty { Name = "Răng Hàm Mặt", Description = "Khám và điều trị răng miệng" },
+                    new Specialty { Name = "Tai Mũi Họng", Description = "Khám và điều trị bệnh tai mũi họng" }
+                );
                 await context.SaveChangesAsync();
             }
 
-            // 1. TẠO CÁC ROLE
-            string[] roleNames = { "Admin", "Doctor", "Receptionist", "Patient" };
-            foreach (var roleName in roleNames)
+            // 1. ROLES
+            foreach (var roleName in new[] { "Admin", "Doctor", "Receptionist", "Patient" })
             {
                 if (!await roleManager.RoleExistsAsync(roleName))
-                {
                     await roleManager.CreateAsync(new IdentityRole(roleName));
-                }
             }
 
-            // 2. TẠO TÀI KHOẢN ADMIN
-            string adminEmail = "admin@medislot.com";
-            var adminUser = await userManager.FindByEmailAsync(adminEmail);
-            if (adminUser == null)
+            // 2. ADMIN — mật khẩu từ cấu hình, KHÔNG hardcode
+            var adminEmail = config["Seed:AdminEmail"] ?? "admin@medislot.com";
+            var adminPassword = config["Seed:AdminPassword"];
+
+            if (string.IsNullOrWhiteSpace(adminPassword))
             {
-                var newAdmin = new ApplicationUser
+                logger.LogWarning("Seed:AdminPassword chưa được cấu hình → BỎ QUA tạo Admin. " +
+                                  "Hãy set bằng user-secrets hoặc biến môi trường.");
+            }
+            else if (await userManager.FindByEmailAsync(adminEmail) == null)
+            {
+                var admin = new ApplicationUser
                 {
                     UserName = adminEmail,
                     Email = adminEmail,
@@ -92,25 +104,23 @@ namespace DatLichKhamBenh.Data.Seed
                     FirstName = "Quản trị",
                     MiddleName = "Viên",
                     PhoneNumber = "0123456789",
-                    MustChangePassword = false,
+                    MustChangePassword = true,     // BẮT BUỘC đổi lần đầu
                     LockoutEnabled = true
                 };
 
-                const string adminPassword = "Admin@123";
-                var createAdminResult = await userManager.CreateAsync(newAdmin, adminPassword);
-                if (createAdminResult.Succeeded)
-                {
-                    await userManager.AddToRoleAsync(newAdmin, "Admin");
-                }
+                var result = await userManager.CreateAsync(admin, adminPassword);
+                if (result.Succeeded)
+                    await userManager.AddToRoleAsync(admin, "Admin");
+                else
+                    logger.LogError("Tạo Admin thất bại: {Errors}",
+                        string.Join("; ", result.Errors.Select(e => e.Description)));
             }
-
-            // 3. TẠO TÀI KHOẢN BỆNH NHÂN MẪU
-            string patientEmail = "patient@gmail.com";
-            var patientUser = await userManager.FindByEmailAsync(patientEmail);
-            if (patientUser == null)
+            else
             {
-                var newPatient = new ApplicationUser
+                var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
+                if (existingAdmin != null && env.IsDevelopment() && !string.IsNullOrWhiteSpace(adminPassword))
                 {
+<<<<<<< HEAD
                     UserName = patientEmail,
                     Email = patientEmail,
                     EmailConfirmed = true,
@@ -154,14 +164,20 @@ namespace DatLichKhamBenh.Data.Seed
                         Console.WriteLine($"[Seed] Không thể tạo hồ sơ BenhNhan: {ex.Message}");
 >>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
                     }
+=======
+                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(existingAdmin);
+                    await userManager.ResetPasswordAsync(existingAdmin, resetToken, adminPassword);
+                    existingAdmin.EmailConfirmed = true;
+                    existingAdmin.MustChangePassword = true;
+                    await userManager.UpdateAsync(existingAdmin);
+>>>>>>> 5b38487 (L5_B5: Fix: Luồng MCV và đồng nhất giao diện)
                 }
             }
 
-            // 4. TẠO TÀI KHOẢN BÁC SĨ MẪU
-            string doctorEmail = "doctor@medislot.com";
-            var doctorUser = await userManager.FindByEmailAsync(doctorEmail);
-            if (doctorUser == null)
+            // 3. USER MẪU — CHỈ Ở DEVELOPMENT
+            if (env.IsDevelopment())
             {
+<<<<<<< HEAD
                 var newDoctor = new ApplicationUser
                 {
                     UserName = doctorEmail,
@@ -224,7 +240,181 @@ namespace DatLichKhamBenh.Data.Seed
 >>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
                     }
                 }
+=======
+                await SeedDemoPatient(userManager, context, config, logger);
+                await SeedDemoDoctor(userManager, context, config, logger);
+                await SeedDemoReceptionist(userManager, config, logger);
+>>>>>>> 5b38487 (L5_B5: Fix: Luồng MCV và đồng nhất giao diện)
             }
+        }
+
+        private static async Task SeedDemoPatient(
+            UserManager<ApplicationUser> userManager,
+            ApplicationDbContext context,
+            IConfiguration config,
+            ILogger logger)
+        {
+            const string email = "patient@gmail.com";
+            var existing = await userManager.FindByEmailAsync(email);
+            if (existing != null)
+            {
+                var testPassword = config["Seed:DemoPassword"];
+                if (!string.IsNullOrWhiteSpace(testPassword))
+                {
+                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
+                    await userManager.ResetPasswordAsync(existing, resetToken, testPassword);
+                    existing.EmailConfirmed = true;
+                    existing.MustChangePassword = false;
+                    await userManager.UpdateAsync(existing);
+                }
+                return;
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                FirstName = "Văn A",
+                MiddleName = "Nguyễn",
+                PhoneNumber = "0987654321",
+                MustChangePassword = false,
+                LockoutEnabled = true
+            };
+
+            var password = config["Seed:DemoPassword"];
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                logger.LogWarning("Seed:DemoPassword chưa được cấu hình → bỏ qua tạo tài khoản bệnh nhân mẫu.");
+                return;
+            }
+            var result = await userManager.CreateAsync(user, password);
+            if (!result.Succeeded)
+            {
+                logger.LogError("Seed patient lỗi: {E}",
+                    string.Join("; ", result.Errors.Select(e => e.Description)));
+                return;
+            }
+
+            await userManager.AddToRoleAsync(user, "Patient");
+            context.Patients.Add(new Patient { UserId = user.Id });
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedDemoDoctor(
+            UserManager<ApplicationUser> userManager,
+            ApplicationDbContext context,
+            IConfiguration config,
+            ILogger logger)
+        {
+            const string email = "doctor@medislot.com";
+            var existing = await userManager.FindByEmailAsync(email);
+            if (existing != null)
+            {
+                var testPassword = config["Seed:DemoPassword"];
+                if (!string.IsNullOrWhiteSpace(testPassword))
+                {
+                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
+                    await userManager.ResetPasswordAsync(existing, resetToken, testPassword);
+                    existing.EmailConfirmed = true;
+                    existing.MustChangePassword = false;
+                    await userManager.UpdateAsync(existing);
+                }
+                return;
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                FirstName = "B",
+                MiddleName = "Trần Thị",
+                PhoneNumber = "0912345678",
+                MustChangePassword = false,
+                LockoutEnabled = true
+            };
+
+            var password = config["Seed:DemoPassword"];
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                logger.LogWarning("Seed:DemoPassword chưa được cấu hình → bỏ qua tạo tài khoản bác sĩ mẫu.");
+                return;
+            }
+            var result = await userManager.CreateAsync(user, password);
+            if (!result.Succeeded)
+            {
+                logger.LogError("Seed doctor lỗi: {E}",
+                    string.Join("; ", result.Errors.Select(e => e.Description)));
+                return;
+            }
+
+            await userManager.AddToRoleAsync(user, "Doctor");
+            var specialty = await context.Specialties.FirstOrDefaultAsync();
+            if (specialty == null)
+            {
+                logger.LogWarning("Không có chuyên khoa để gán cho bác sĩ mẫu.");
+                await userManager.DeleteAsync(user);
+                return;
+            }
+            context.Doctors.Add(new Doctor
+            {
+                UserId = user.Id,
+                SpecialtyId = specialty.Id,
+                IsActive = true,
+                CreatedAt = DateTime.Now
+            });
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedDemoReceptionist(
+            UserManager<ApplicationUser> userManager,
+            IConfiguration config,
+            ILogger logger)
+        {
+            const string email = "receptionist@medislot.com";
+            var existing = await userManager.FindByEmailAsync(email);
+            if (existing != null)
+            {
+                var testPassword = config["Seed:DemoPassword"];
+                if (!string.IsNullOrWhiteSpace(testPassword))
+                {
+                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
+                    await userManager.ResetPasswordAsync(existing, resetToken, testPassword);
+                    existing.EmailConfirmed = true;
+                    existing.MustChangePassword = false;
+                    await userManager.UpdateAsync(existing);
+                }
+                return;
+            }
+
+            var password = config["Seed:DemoPassword"];
+            if (string.IsNullOrWhiteSpace(password))
+            {
+                logger.LogWarning("Seed:DemoPassword chưa được cấu hình → bỏ qua tạo tài khoản lễ tân mẫu.");
+                return;
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true,
+                FirstName = "Lễ tân",
+                MiddleName = "Mẫu",
+                LockoutEnabled = true,
+                MustChangePassword = false
+            };
+
+            var result = await userManager.CreateAsync(user, password);
+            if (!result.Succeeded)
+            {
+                logger.LogError("Seed receptionist lỗi: {Errors}",
+                    string.Join("; ", result.Errors.Select(e => e.Description)));
+                return;
+            }
+
+            await userManager.AddToRoleAsync(user, "Receptionist");
         }
     }
 }

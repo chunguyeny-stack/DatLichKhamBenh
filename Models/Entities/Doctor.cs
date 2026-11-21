@@ -17,11 +17,23 @@ namespace DatLichKhamBenh.Models.Entities
         [Column("application_user_id")]
         public string? ApplicationUserId { get; set; }
 
+<<<<<<< HEAD
         [ForeignKey(nameof(ApplicationUserId))]
         public virtual ApplicationUser? ApplicationUser { get; set; }
 
         [Column("chuyen_khoa_id")]
         public int ChuyenKhoaId { get; set; }
+=======
+        // =====================================================
+        // LIÊN KẾT CHUYÊN KHOA (MỚI)
+        // =====================================================
+        [Display(Name = "Chuyên khoa")]
+        [Required]
+        public int SpecialtyId { get; set; }
+
+        [ForeignKey(nameof(SpecialtyId))]
+        public Specialty Specialty { get; set; } = null!;
+>>>>>>> 5b38487 (L5_B5: Fix: Luồng MCV và đồng nhất giao diện)
 
         [ForeignKey(nameof(ChuyenKhoaId))]
         public virtual ChuyenKhoa? ChuyenKhoa { get; set; }

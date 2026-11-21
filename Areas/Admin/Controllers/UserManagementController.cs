@@ -12,8 +12,12 @@ using DatLichKhamBenh.Models.ViewModels;
 <<<<<<< HEAD
 using Microsoft.EntityFrameworkCore;
 using DatLichKhamBenh.Data;
+<<<<<<< HEAD
 =======
 >>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
+=======
+using DatLichKhamBenh.Services.Interfaces;
+>>>>>>> 5b38487 (L5_B5: Fix: Luồng MCV và đồng nhất giao diện)
 
 namespace DatLichKhamBenh.Areas.Admin.Controllers
 {
@@ -24,18 +28,27 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly IAuthService _authService;
         private readonly ILogger<UserManagementController> _logger;
+        private readonly IEmailService _emailService;
 
         public UserManagementController(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
             ApplicationDbContext context,
-            ILogger<UserManagementController> logger)
+            IConfiguration configuration,
+            IAuthService authService,
+            ILogger<UserManagementController> logger,
+            IEmailService emailService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _context = context;
+            _configuration = configuration;
+            _authService = authService;
             _logger = logger;
+            _emailService = emailService;
         }
 
         // 1. DANH SÁCH NGƯỜI DÙNG
@@ -130,7 +143,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                 LockoutEnabled = true
             };
 
-            const string defaultPassword = "MedBooking@123";
+            var defaultPassword = GenerateTemporaryPassword();
             var result = await _userManager.CreateAsync(user, defaultPassword);
 
             if (result.Succeeded)
@@ -147,7 +160,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                     _context.Doctors.Add(new DatLichKhamBenh.Models.Entities.Doctor
                     {
                         UserId = user.Id,
-                        SpecialtyId = model.SpecialtyId,
+                        SpecialtyId = model.SpecialtyId ?? 0,
                         IsActive = true,
                         CreatedAt = DateTime.Now
                     });
@@ -164,7 +177,12 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                     await _context.SaveChangesAsync();
                 }
 
-                TempData["SuccessMessage"] = $"Đã tạo tài khoản {model.Role}. Mật khẩu: {defaultPassword}";
+                await _emailService.SendAsync(
+                    user.Email!,
+                    "Tài khoản nhân sự MediSlot",
+                    $"<p>Tài khoản của bạn đã được tạo.</p><p>Email: <strong>{user.Email}</strong></p><p>Mật khẩu tạm thời: <strong>{defaultPassword}</strong></p><p>Bạn phải đổi mật khẩu ở lần đăng nhập đầu tiên.</p>");
+
+                TempData["SuccessMessage"] = $"Đã tạo tài khoản {model.Role}. Thông tin đăng nhập đã được gửi đến email.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -202,14 +220,13 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
         {
             if (!ModelState.IsValid) return View(model);
 
-            var user = await _userManager.FindByIdAsync(model.Id);
-            if (user == null) return NotFound();
-
-            await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
-            user.LockoutReason = model.Reason;
-            await _userManager.UpdateAsync(user);
-
-            TempData["SuccessMessage"] = $"Đã khóa tài khoản {user.Email}.";
+            var result = await _authService.LockUserAsync(_userManager.GetUserId(User)!, model);
+            if (!result.Success)
+            {
+                ModelState.AddModelError("", result.Message);
+                return View(model);
+            }
+            TempData["SuccessMessage"] = result.Message;
             return RedirectToAction(nameof(Index));
         }
 
@@ -220,14 +237,13 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
         {
             if (string.IsNullOrEmpty(userId)) return BadRequest();
 
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return NotFound();
-
-            await _userManager.SetLockoutEndDateAsync(user, null);
-            user.LockoutReason = null;
-            await _userManager.UpdateAsync(user);
-
-            TempData["SuccessMessage"] = $"Đã mở khóa tài khoản {user.Email}.";
+            var result = await _authService.UnlockUserAsync(_userManager.GetUserId(User)!, userId);
+            if (!result.Success)
+            {
+                ModelState.AddModelError("", result.Message);
+                return RedirectToAction(nameof(Index));
+            }
+            TempData["SuccessMessage"] = result.Message;
             return RedirectToAction(nameof(Index));
         }
 
@@ -259,8 +275,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return NotFound();
 
-            // Mật khẩu mặc định khi reset
-            const string defaultPassword = "MedBooking@123";
+            var defaultPassword = GenerateTemporaryPassword();
 
             // 1. Tạo token và reset mật khẩu
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -276,8 +291,16 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                 user.LockoutReason = null;
 
                 await _userManager.UpdateAsync(user);
+                await _userManager.UpdateSecurityStampAsync(user);
+                await _authService.LogActionAsync(
+                    _userManager.GetUserId(User)!, "ResetPassword", user.Id,
+                    "Admin đặt lại mật khẩu tạm thời");
+                await _emailService.SendAsync(
+                    user.Email!,
+                    "Mật khẩu MediSlot đã được đặt lại",
+                    $"<p>Mật khẩu tạm thời mới: <strong>{defaultPassword}</strong></p><p>Bạn phải đổi mật khẩu ở lần đăng nhập tiếp theo.</p>");
 
-                TempData["SuccessMessage"] = $"Đã reset mật khẩu cho tài khoản {user.Email}. Mật khẩu mới: {defaultPassword}. Người dùng sẽ phải đổi mật khẩu khi đăng nhập.";
+                TempData["SuccessMessage"] = $"Đã reset mật khẩu cho tài khoản {user.Email}. Mật khẩu tạm thời đã được gửi qua email.";
             }
             else
             {
@@ -292,6 +315,14 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        private static string GenerateTemporaryPassword()
+        {
+            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+            return "Med!" + new string(Enumerable.Range(0, 12)
+                .Select(_ => chars[Random.Shared.Next(chars.Length)])
+                .ToArray());
         }
     }
 }
