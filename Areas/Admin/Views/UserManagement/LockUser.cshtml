@@ -1,0 +1,64 @@
+@model DatLichKhamBenh.Models.ViewModels.LockUserViewModel
+@{
+    ViewData["Title"] = "Khóa tài khoản";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+}
+
+<style>
+    body { background-color: #f3f2f1; font-family: 'Segoe UI', sans-serif; }
+    .modal-container {
+        max-width: 500px;
+        margin: 60px auto;
+        background: #fff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-top: 4px solid #d13438;
+    }
+    .warning-icon { font-size: 3rem; color: #d13438; text-align: center; margin-bottom: 15px; }
+    .modal-title { text-align: center; font-size: 1.5rem; font-weight: 600; color: #1b1b1b; margin-bottom: 10px; }
+    .modal-desc { text-align: center; color: #555; margin-bottom: 25px; font-size: 0.95rem; }
+    .form-control { border: 1px solid #ccc; border-radius: 4px; padding: 10px 14px; }
+    .form-control:focus { border-color: #d13438; box-shadow: 0 0 0 1px #d13438; }
+    .btn-danger { background-color: #d13438; border: 1px solid #d13438; color: white; width: 100%; padding: 10px; font-weight: 600; border-radius: 4px; }
+    .btn-danger:hover { background-color: #a92629; color: white; }
+    .btn-cancel { display: block; text-align: center; margin-top: 15px; color: #0067b8; text-decoration: none; font-weight: 600; }
+    .btn-cancel:hover { text-decoration: underline; }
+    .user-info-box { background: #f8f9fa; padding: 15px; border-radius: 4px; margin-bottom: 20px; font-size: 0.95rem; }
+    .user-info-box strong { color: #1b1b1b; }
+</style>
+
+<div class="container">
+    <div class="modal-container">
+        <div class="warning-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+        <h2 class="modal-title">Khóa tài khoản người dùng</h2>
+        <p class="modal-desc">Hành động này sẽ ngăn người dùng đăng nhập vào hệ thống ngay lập tức.</p>
+
+        <div class="user-info-box">
+            <div class="mb-1"><strong>Tài khoản:</strong> @Model.Email</div>
+            <div><strong>Họ tên:</strong> @Model.FullName</div>
+        </div>
+
+        <form asp-action="LockUser" method="post">
+            @Html.AntiForgeryToken()
+            
+            <input type="hidden" asp-for="Id" />
+
+            <div class="mb-3">
+                <label asp-for="Reason" class="form-label fw-bold"></label>
+                <span class="text-danger">*</span>
+                <textarea asp-for="Reason" class="form-control" rows="3" placeholder="Nhập lý do (Ví dụ: Vi phạm nội quy, nghỉ việc, v.v...)"></textarea>
+                <span asp-validation-for="Reason" class="text-danger small"></span>
+            </div>
+
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-lock-fill"></i> Xác nhận Khóa
+            </button>
+            <a asp-action="Index" class="btn-cancel">Hủy bỏ và quay lại</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

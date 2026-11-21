@@ -4,58 +4,96 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@ViewData["Title"] - MediSlot Bác sĩ</title>
+    
     <!-- Nhúng Font Awesome & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Giữ lại Bootstrap của bạn kia và CSS của bạn -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/BS.css">
+
+    <!-- CSS TÙY CHỈNH CHO MENU NGANG -->
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; margin: 0; }
+        
+        /* Thanh Navbar ngang */
+        .navbar-custom {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 10px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .brand-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #0f172a; }
+        .brand-logo img { width: 40px; height: 40px; border-radius: 50%; object-fit: contain; }
+        .brand-name { font-size: 20px; font-weight: 700; color: #14b8a6; margin: 0; line-height: 1; }
+        .brand-sub { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Menu liên kết */
+        .nav-menu-horizontal { display: flex; gap: 20px; align-items: center; margin: 0 auto; list-style: none; padding: 0; }
+        .nav-menu-horizontal a { text-decoration: none; color: #475569; font-weight: 500; font-size: 14px; padding: 8px 12px; border-radius: 8px; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .nav-menu-horizontal a:hover, .nav-menu-horizontal a.active { background-color: #ccfbf1; color: #0f766e; }
+
+        /* Phần thông tin User bên phải */
+        .user-actions { display: flex; align-items: center; gap: 15px; }
+        .user-info { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+        .avatar-circle { width: 35px; height: 35px; border-radius: 50%; background-color: #14b8a6; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        
+        /* Nội dung chính */
+        .main-content { padding: 30px; max-width: 1400px; margin: 0 auto; }
+    </style>
 </head>
 <body>
-    <div class="app-layout">
-        <!-- SIDEBAR -->
-        <aside class="sidebar" id="sidebar">
-            <div class="brand">
-                <div class="logo-icon">
-                    <!-- LOGO 4 TRÁI TIM CỦA BẠN -->
-                    <img src="~/images/logo.png" alt="MediSlot Logo">
-                </div>
+
+    <!-- NAVBAR NGANG -->
+    <nav class="navbar-custom">
+        <div class="container-fluid px-4 d-flex align-items-center justify-content-between">
+            
+            <!-- Logo -->
+            <a href="/Doctor/Home/Index" class="brand-logo">
+                <img src="~/images/logo.png" alt="MediSlot Logo">
                 <div>
-                    <div class="brand-name">MediSlot</div>
-                    <div class="brand-sub">Cổng Bác sĩ</div>
+                    <p class="brand-name">MediSlot</p>
+                    <span class="brand-sub">Cổng Bác sĩ</span>
                 </div>
-            </div>
-            <ul class="nav-menu">
-                <li><a href="/Doctor/Home/Index" class="nav-link"><i class="fas fa-home"></i> Dashboard</a></li>
-                <li><a href="/Doctor/Examination/Index" class="nav-link"><i class="fas fa-stethoscope"></i> Khám bệnh</a></li>
-                <li><a href="/Doctor/LeaveRequest/Index" class="nav-link"><i class="fas fa-calendar-minus"></i> Xin nghỉ phép</a></li>
+            </a>
+
+            <!-- Menu Ngang (Ở giữa) -->
+            <ul class="nav-menu-horizontal d-none d-md-flex">
+                <li><a href="/Doctor/Home/Index"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="/Doctor/Examination/Index"><i class="fas fa-stethoscope"></i> Khám bệnh</a></li>
+                <li><a href="/Doctor/LeaveRequest/Index"><i class="fas fa-calendar-minus"></i> Xin nghỉ phép</a></li>
             </ul>
-            <div class="sidebar-footer">
-                <div class="avatar-sm">BS</div>
-                <div class="info">
-                    <strong>BS. Nguyễn Văn A</strong>
-                    <span>Nội Tổng Quát</span>
+
+            <!-- Thông tin User & Nút Đăng xuất (Bên phải) -->
+            <div class="user-actions">
+                <button class="btn btn-light rounded-circle" style="width: 35px; height: 35px; padding: 0;"><i class="fas fa-bell"></i></button>
+                
+                <div class="user-info">
+                    <div class="avatar-circle">BS</div>
+                    <span class="d-none d-lg-block">BS. Nguyễn Văn A</span>
                 </div>
+
+                <!-- Nút Đăng xuất lấy từ code của bạn kia (Bảo mật bằng POST) -->
+                <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                    @Html.AntiForgeryToken()
+                    <button class="btn btn-outline-danger btn-sm" type="submit" style="border-radius: 20px;">
+                        <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                    </button>
+                </form>
             </div>
-        </aside>
 
-        <!-- MAIN -->
-        <div class="main-area">
-            <header class="topbar">
-                <div class="page-title">@ViewData["Title"]</div>
-                <div class="topbar-right">
-                    <!-- Chỉ giữ lại thông báo (chuông) và thông tin User -->
-                    <button class="icon-btn"><i class="fas fa-bell"></i></button>
-                    <div class="user-chip">
-                        <div class="avatar">BS</div>
-                        <span>BS. Nguyễn Văn A</span>
-                    </div>
-                </div>
-            </header>
-            <main class="content">
-                @RenderBody()
-            </main>
         </div>
-    </div>
+    </nav>
 
+    <!-- MAIN CONTENT (Nội dung các trang con sẽ hiển thị ở đây) -->
+    <main class="main-content">
+        @RenderBody()
+    </main>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

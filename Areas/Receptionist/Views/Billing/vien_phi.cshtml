@@ -1,0 +1,366 @@
+@using System.Collections.Generic
+@{
+    Layout = null;
+    string receptionistName = ViewBag.ReceptionistName ?? "Lễ tân";
+    string initials = receptionistName.Trim().Length >= 2 ? receptionistName.Trim().Substring(0, 2).ToUpper() : receptionistName.Trim().ToUpper();
+    string cloverLogoUrl = Url.Content("~/static/images/logo-clover.png");
+
+    string urlTongQuan = Url.Action("Index", "dashboard_le_tan", new { area = "Receptionist" }) ?? "/Receptionist/dashboard_le_tan";
+    string urlQuanLyLichHen = Url.Action("Index", "quan_ly_lich_hen_BN", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_hen_BN";
+    string urlDanhSachCaTruc = Url.Action("Index", "quan_ly_lich_lam_viec_BS", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_lam_viec_BS";
+    string urlVienPhi = Url.Action("Index", "vien_phi", new { area = "Receptionist" }) ?? "/Receptionist/vien_phi";
+    string urlHoSoCaNhan = Url.Action("Index", "ho_so_ca_nhan_le_tan", new { area = "Receptionist" }) ?? "/Receptionist/ho_so_ca_nhan_le_tan";
+
+    string urlGetData = Url.Action("GetInvoicesData", "vien_phi", new { area = "Receptionist" }) ?? "/Receptionist/vien_phi/GetInvoicesData";
+    string urlConfirmPay = Url.Action("ConfirmPayment", "vien_phi", new { area = "Receptionist" }) ?? "/Receptionist/vien_phi/ConfirmPayment";
+
+    string tempSuccess = TempData["Success"]?.ToString() ?? "";
+    string tempError = TempData["Error"]?.ToString() ?? "";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSlot - Quản lý Viện phí</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/static/css/LT_BS.css" asp-append-version="true">
+    <style>
+        :root {
+            --bg-body: #f4f7fb; --bg-card: #ffffff; --text-color: #1e293b; --text-gray: #64748b;
+            --secondary-color: #0f172a; --border-color: #e2e8f0; --primary-blue: #2563eb;
+            --primary-blue-light: #eff6ff; --primary-blue-soft: rgba(37, 99, 235, 0.08);
+            --accent-green: #10b981; --accent-orange: #f59e0b; --accent-red: #ef4444;
+            --radius: 14px; --shadow: 0 4px 18px rgba(15, 23, 42, 0.04); --shell-max: 1480px; --shell-pad: 24px;
+        }
+        html, body { max-width: 100%; overflow-x: hidden; margin: 0; font-family: 'Poppins', sans-serif; background: var(--bg-body); color: var(--text-color); }
+        header {
+            width: calc(100% - var(--shell-pad) * 2) !important; max-width: var(--shell-max) !important; margin: 10px auto 15px !important;
+            padding: 10px 24px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;
+            flex-wrap: wrap !important; gap: 12px !important; background: var(--bg-card); border-radius: 14px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); box-sizing: border-box !important;
+        }
+        .logo-container, .footer-logo { display: flex; align-items: center; gap: 12px; }
+        .footer-logo { justify-content: center; }
+        .brand-clover { width: 42px; height: 42px; border-radius: 12px; background: #fff; border: 1px solid var(--border-color); padding: 4px; box-sizing: border-box; flex-shrink: 0; overflow: hidden; }
+        .brand-clover img, .brand-clover svg { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .brand-title { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.15; background: linear-gradient(135deg, var(--primary-blue) 0%, #6366f1 55%, #ec4899 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .logo-text p { margin: 0; font-size: 11.5px; color: var(--text-gray); }
+        header nav ul { display: flex !important; gap: 14px !important; align-items: center !important; flex-wrap: wrap !important; margin: 0 !important; padding: 0 !important; list-style: none !important; }
+        header nav ul li a { font-size: 13.5px !important; font-weight: 500; white-space: nowrap !important; padding: 8px 12px !important; color: var(--text-color); text-decoration: none; border-radius: 8px; }
+        header nav ul li a:hover { background: var(--primary-blue-soft); color: var(--primary-blue); }
+        .header-right, .user-badge { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .user-badge { cursor: pointer; white-space: nowrap !important; padding: 6px 14px !important; border-radius: 999px; background: var(--bg-body); border: 1px solid var(--border-color); }
+        .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--primary-blue); color: #fff; font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .user-name { font-size: 13.5px !important; font-weight: 600; max-width: 140px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+        .user-role { font-size: 11px; color: var(--text-gray); }
+        .logout-btn { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #EF4444; font-size: 16px; }
+        .logout-btn:hover { background: #EF4444; color: #fff; }
+        main { width: 100%; max-width: 1180px; margin: 16px auto 70px; padding: 0 var(--shell-pad); box-sizing: border-box; }
+        .page-title h2 { margin: 0 0 16px; font-size: 22px; color: var(--secondary-color); }
+        .toast-alert { padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-size: 13px; font-weight: 500; }
+        .toast-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .toast-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .info-banner { background: var(--primary-blue-light); border-left: 4px solid var(--primary-blue); padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-bottom: 18px; display: flex; gap: 10px; align-items: center; }
+        .cashier-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .cashier-stat { background: var(--bg-card); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); border: 2px solid var(--border-color); display: flex; align-items: center; gap: 14px; cursor: pointer; transition: .2s; }
+        .cashier-stat.active, .cashier-stat:hover { border-color: var(--primary-blue); background: var(--primary-blue-light); }
+        .cashier-stat.green.active { border-color: var(--accent-green); background: #ecfdf5; }
+        .cashier-stat.orange.active { border-color: var(--accent-orange); background: #fffbeb; }
+        .cashier-stat-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--primary-blue); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+        .cashier-stat.green .cashier-stat-icon { background: var(--accent-green); }
+        .cashier-stat.orange .cashier-stat-icon { background: var(--accent-orange); }
+        .cashier-stat-info h4 { margin: 0 0 2px; font-size: 20px; font-weight: 700; color: var(--secondary-color); }
+        .cashier-stat-info p { margin: 0; font-size: 11.5px; color: var(--text-gray); text-transform: uppercase; }
+        .search-card, .invoice-card, .recent-transactions { background: var(--bg-card); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); border: 1px solid var(--border-color); margin-bottom: 20px; }
+        .search-row { display: flex; gap: 10px; }
+        .search-row input { flex: 1; height: 42px; padding: 0 14px; border: 1px solid var(--border-color); border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 13.5px; background: var(--bg-body); }
+        .invoice-header { text-align: center; padding-bottom: 16px; border-bottom: 1px dashed var(--border-color); margin-bottom: 18px; position: relative; }
+        .invoice-header h2 { margin: 0 0 4px; font-size: 20px; color: var(--primary-blue); }
+        .invoice-status-badge { position: absolute; right: 0; top: 0; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #fef3c7; color: #b45309; }
+        .invoice-status-badge.paid { background: #dcfce7; color: #15803d; }
+        .invoice-info { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+        .info-block { background: var(--bg-body); padding: 12px; border-radius: 10px; border-left: 3px solid var(--primary-blue); }
+        .info-block .label { font-size: 11px; color: var(--text-gray); text-transform: uppercase; }
+        .info-block .value { font-size: 13.5px; font-weight: 600; margin-top: 2px; }
+        .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px; }
+        .invoice-table th { text-align: left; padding: 10px 12px; background: var(--primary-blue-light); color: var(--primary-blue); font-size: 12px; }
+        .invoice-table th:last-child, .invoice-table td:last-child { text-align: right; }
+        .invoice-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); }
+        .invoice-total { background: var(--primary-blue); color: #fff; padding: 14px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-weight: 600; }
+        .invoice-total .amount { font-size: 20px; font-weight: 700; }
+        .invoice-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+        .recent-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .recent-header h3 { margin: 0; font-size: 15.5px; color: var(--primary-blue); }
+        .transaction-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--bg-body); margin-bottom: 8px; cursor: pointer; }
+        .transaction-item:hover { background: var(--primary-blue-light); }
+        .transaction-info { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+        .transaction-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-green); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+        .transaction-text h5 { margin: 0 0 2px; font-size: 13.5px; }
+        .transaction-text p { margin: 0; font-size: 11.5px; color: var(--text-gray); }
+        .transaction-amount { font-weight: 700; font-size: 14px; color: var(--accent-green); white-space: nowrap; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: var(--bg-card); color: var(--text-color); padding: 24px; border-radius: var(--radius); width: 100%; max-width: 520px; box-sizing: border-box; }
+        footer { width: calc(100% - var(--shell-pad) * 2); max-width: var(--shell-max); margin: 36px auto 24px; padding: 24px; box-sizing: border-box; background: var(--bg-card); border-radius: var(--radius); border: 1px solid var(--border-color); display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; font-size: 13px; color: var(--text-gray); text-align: center; }
+        footer > div { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        footer h4 { margin: 0 0 10px; color: var(--secondary-color); }
+        @@media (max-width: 820px) { .cashier-stats, .invoice-info { grid-template-columns: 1fr; } .search-row { flex-direction: column; } }
+    </style>
+</head>
+<body>
+<header>
+    <div class="logo-container">
+        <div class="brand-clover">
+            <img src="@cloverLogoUrl" alt="MediSlot" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+            <svg viewBox="0 0 100 100" style="display:none;"><path d="M46 46 C46 28, 22 24, 16 38 C12 48, 26 56, 46 46 Z" fill="#cfa0e3" /><path d="M54 46 C54 28, 78 24, 84 38 C88 48, 74 56, 54 46 Z" fill="#77b82a" /><path d="M46 54 C46 72, 22 76, 16 62 C12 52, 26 44, 46 54 Z" fill="#239be7" /><path d="M54 54 C54 72, 78 76, 84 62 C88 52, 74 44, 54 54 Z" fill="none" stroke="#e5a9b5" stroke-width="4" /></svg>
+        </div>
+        <div class="logo-text"><h1 class="brand-title">MediSlot</h1><p>Cổng Lễ Tân</p></div>
+    </div>
+    <div class="header-right">
+        <nav>
+            <ul>
+                <li><a href="@urlTongQuan">Tổng quan</a></li>
+                <li><a href="@urlQuanLyLichHen">Quản lý lịch hẹn</a></li>
+                <li><a href="@urlDanhSachCaTruc">Danh sách ca trực</a></li>
+                <li><a href="@urlVienPhi"><strong>Viện phí</strong></a></li>
+            </ul>
+        </nav>
+        <div class="user-badge" onclick="window.location.href='@urlHoSoCaNhan'" title="Hồ sơ cá nhân lễ tân">
+            <div class="user-avatar">@initials</div>
+            <div><div class="user-name">@receptionistName</div><div class="user-role">Lễ tân</div></div>
+        </div>
+        <button type="button" class="logout-btn" onclick="window.location.href='/Account/Login'" title="Đăng xuất"><i class="fas fa-sign-out-alt"></i></button>
+    </div>
+</header>
+
+<main>
+    <div class="breadcrumb"><a href="@urlTongQuan"><i class="fas fa-home"></i> Tổng quan</a><i class="fas fa-chevron-right"></i><span>Thu viện phí</span></div>
+    @if (!string.IsNullOrWhiteSpace(tempSuccess)) { <div class="toast-alert toast-success"><i class="fas fa-check-circle"></i> @tempSuccess</div> }
+    @if (!string.IsNullOrWhiteSpace(tempError)) { <div class="toast-alert toast-error"><i class="fas fa-exclamation-circle"></i> @tempError</div> }
+
+    <div class="page-title"><h2><i class="fas fa-money-bill-wave"></i> Quản lý Viện phí & Thanh toán</h2></div>
+
+    <div class="info-banner">
+        <i class="fas fa-info-circle" style="color:var(--primary-blue);"></i>
+        <span>Chỉ thu viện phí khi bệnh nhân đã <strong>check-in / đến khám</strong>. Lịch hẹn chưa đến hoặc đã hủy không phát sinh chi phí.</span>
+    </div>
+
+    <div class="cashier-stats">
+        <div class="cashier-stat green active" data-filter="cash" onclick="filterTransactions('cash')">
+            <div class="cashier-stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+            <div class="cashier-stat-info"><h4 id="stat-cash-today">0 VNĐ</h4><p>Tiền mặt thu hôm nay</p></div>
+        </div>
+        <div class="cashier-stat" data-filter="invoices" onclick="filterTransactions('invoices')">
+            <div class="cashier-stat-icon"><i class="fas fa-file-invoice"></i></div>
+            <div class="cashier-stat-info"><h4 id="stat-invoices-today">0</h4><p>Hóa đơn đã thu</p></div>
+        </div>
+        <div class="cashier-stat orange" data-filter="pending" onclick="filterTransactions('pending')">
+            <div class="cashier-stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="cashier-stat-info"><h4 id="stat-pending-invoices">0</h4><p>Chờ thu tiền</p></div>
+        </div>
+    </div>
+
+    <div class="search-card">
+        <form class="search-row" onsubmit="event.preventDefault(); searchInvoice();">
+            <input type="text" id="search-input" placeholder="Nhập mã lịch hẹn (VD: LH001 hoặc 1) để tra cứu hóa đơn...">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Tra cứu</button>
+        </form>
+    </div>
+
+    <div class="invoice-card" id="invoice-card" style="display:none;">
+        <div class="invoice-header">
+            <span class="invoice-status-badge" id="inv-status">Chờ thanh toán</span>
+            <h2>HÓA ĐƠN VIỆN PHÍ</h2>
+            <p style="margin:0; font-size:13px; color:var(--text-gray);">Mã HĐ: <strong id="invoice-id">-</strong> • Ngày: <strong id="invoice-date">-</strong></p>
+        </div>
+        <div class="invoice-info">
+            <div class="info-block"><div class="label">Mã lịch hẹn</div><div class="value" id="inv-patient">-</div></div>
+            <div class="info-block"><div class="label">Bác sĩ khám</div><div class="value" id="inv-doctor">-</div></div>
+            <div class="info-block"><div class="label">Ca khám</div><div class="value" id="inv-ca">-</div></div>
+            <div class="info-block"><div class="label">Dịch vụ</div><div class="value" id="inv-specialty">-</div></div>
+        </div>
+        <table class="invoice-table">
+            <thead><tr><th>Khoản mục</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead>
+            <tbody id="invoice-items"></tbody>
+        </table>
+        <div class="invoice-total"><span>TỔNG CỘNG (TIỀN MẶT)</span><span class="amount" id="inv-total">0 VNĐ</span></div>
+        <div class="invoice-actions" id="invoice-actions"></div>
+    </div>
+
+    <div class="recent-transactions">
+        <div class="recent-header"><h3 id="recent-title"><i class="fas fa-history"></i> Giao dịch tiền mặt hôm nay</h3></div>
+        <div id="recent-transactions-list"></div>
+    </div>
+</main>
+
+<footer>
+    <div>
+        <div class="footer-logo">
+            <div class="brand-clover"><img src="@cloverLogoUrl" alt="MediSlot" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" /><svg viewBox="0 0 100 100" style="display:none;"><path d="M46 46 C46 28, 22 24, 16 38 C12 48, 26 56, 46 46 Z" fill="#cfa0e3" /><path d="M54 46 C54 28, 78 24, 84 38 C88 48, 74 56, 54 46 Z" fill="#77b82a" /><path d="M46 54 C46 72, 22 76, 16 62 C12 52, 26 44, 46 54 Z" fill="#239be7" /><path d="M54 54 C54 72, 78 76, 84 62 C88 52, 74 44, 54 54 Z" fill="none" stroke="#e5a9b5" stroke-width="4" /></svg></div>
+            <div class="logo-text"><h1 class="brand-title">MediSlot</h1><p>Cổng Lễ Tân</p></div>
+        </div>
+        <p>Hệ thống quản lý y tế MediSlot - Giải pháp toàn diện cho bệnh viện và phòng khám.</p>
+        <p><strong>"MediSlot chúc quý khách và gia đình luôn có một sức khỏe dồi dào!"</strong></p>
+    </div>
+    <div><h4>Thông tin liên hệ</h4><p>Địa chỉ: Số 15, Phố Dịch Vọng Hậu, Quận Cầu Giấy, Hà Nội</p><p>Hotline: 1900 6868</p><p>Email: support@medislot.vn</p></div>
+</footer>
+
+<div class="modal-overlay" id="modal-overlay">
+    <div class="modal-box">
+        <h3 id="modal-title" style="margin:0 0 10px; color:var(--primary-blue);">Thông báo</h3>
+        <p id="modal-message" style="font-size:13.5px; color:var(--text-gray); margin:0 0 18px;"></p>
+        <div id="modal-actions" style="display:flex; justify-content:flex-end; gap:10px;"></div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<script>
+    const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    const urls = { getData: '@urlGetData', confirmPay: '@urlConfirmPay' };
+    let invoicesMap = {}, paidList = [], currentInvoice = null, currentFilter = 'cash';
+
+    const fmtMoney = n => (Number(n) || 0).toLocaleString('vi-VN') + ' VNĐ';
+    const calcTotal = items => (items || []).reduce((s, i) => s + (Number(i.qty) || 1) * (Number(i.price) || 300000), 0);
+    const isToday = iso => { if (!iso) return false; const d = new Date(iso), t = new Date(); return d.toDateString() === t.toDateString(); };
+
+    function showDialog(title, msg, onOk = null) {
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-message').textContent = msg;
+        const act = document.getElementById('modal-actions');
+        act.innerHTML = onOk
+            ? `<button type="button" class="btn btn-outline" onclick="closeDialog()">Hủy</button><button type="button" class="btn btn-primary" id="dlg-ok">Đồng ý</button>`
+            : `<button type="button" class="btn btn-primary" onclick="closeDialog()">Đã hiểu</button>`;
+        document.getElementById('modal-overlay').classList.add('active');
+        if (onOk) document.getElementById('dlg-ok').onclick = () => { closeDialog(); onOk(); };
+    }
+    window.closeDialog = () => document.getElementById('modal-overlay').classList.remove('active');
+
+    async function loadData() {
+        try {
+            const res = await fetch(urls.getData);
+            if (!res.ok) return;
+            const data = await res.json();
+            invoicesMap = {};
+            (data.invoices || []).forEach(inv => {
+                invoicesMap[inv.code] = inv;
+                invoicesMap[String(inv.rawId)] = inv;
+            });
+            paidList = data.payments || [];
+        } catch (e) { console.error(e); }
+        updateStats();
+        renderList();
+    }
+
+    function updateStats() {
+        const todayPaid = paidList.filter(p => isToday(p.paidAt));
+        const totalToday = todayPaid.reduce((s, p) => s + (Number(p.totalAmount) || 0), 0);
+        const pendingCount = Object.values(invoicesMap).filter((v, i, arr) => arr.findIndex(x => x.rawId === v.rawId) === i && !v.isPaid && v.canPay).length;
+        document.getElementById('stat-cash-today').textContent = fmtMoney(totalToday);
+        document.getElementById('stat-invoices-today').textContent = paidList.length;
+        document.getElementById('stat-pending-invoices').textContent = pendingCount;
+    }
+
+    window.filterTransactions = function (f) {
+        currentFilter = f;
+        document.querySelectorAll('.cashier-stat').forEach(el => el.classList.toggle('active', el.dataset.filter === f));
+        const titles = { cash: 'Giao dịch tiền mặt hôm nay', invoices: 'Tất cả hóa đơn đã thu', pending: 'Hóa đơn chờ thu tiền' };
+        document.getElementById('recent-title').innerHTML = `<i class="fas fa-history"></i> ${titles[f] || 'Giao dịch gần đây'}`;
+        renderList();
+    };
+
+    function renderList() {
+        const box = document.getElementById('recent-transactions-list');
+        if (currentFilter === 'pending') {
+            const unique = []; const seen = new Set();
+            Object.values(invoicesMap).forEach(inv => { if (!seen.has(inv.rawId) && !inv.isPaid && inv.canPay) { seen.add(inv.rawId); unique.push(inv); } });
+            if (!unique.length) { box.innerHTML = `<p style="text-align:center; color:var(--text-gray); padding:24px 0;">Không có hóa đơn chờ thu.</p>`; return; }
+            box.innerHTML = unique.map(inv => `
+                <div class="transaction-item" onclick="quickOpen('${inv.code}')">
+                    <div class="transaction-info">
+                        <div class="transaction-icon" style="background:var(--accent-orange);"><i class="fas fa-clock"></i></div>
+                        <div class="transaction-text"><h5>${inv.code} • ${inv.doctor}</h5><p>${inv.dateDisplay} (${inv.time}) • ${inv.specialty}</p></div>
+                    </div>
+                    <div class="transaction-amount" style="color:var(--accent-orange);">${fmtMoney(calcTotal(inv.items))}</div>
+                </div>`).join('');
+            return;
+        }
+
+        const list = (currentFilter === 'cash' ? paidList.filter(p => isToday(p.paidAt)) : [...paidList]);
+        if (!list.length) { box.innerHTML = `<p style="text-align:center; color:var(--text-gray); padding:24px 0;">Chưa có giao dịch nào.</p>`; return; }
+        box.innerHTML = list.map(p => `
+            <div class="transaction-item" onclick="quickOpen('${p.appointmentCode}')">
+                <div class="transaction-info">
+                    <div class="transaction-icon"><i class="fas fa-check"></i></div>
+                    <div class="transaction-text"><h5>${p.invoiceId} (${p.appointmentCode})</h5><p>${p.paidAtDisplay} • Tiền mặt</p></div>
+                </div>
+                <div class="transaction-amount">+${fmtMoney(p.totalAmount)}</div>
+            </div>`).join('');
+    }
+
+    window.quickOpen = code => { document.getElementById('search-input').value = code; searchInvoice(); };
+
+    window.searchInvoice = function () {
+        const q = document.getElementById('search-input').value.trim().toUpperCase();
+        if (!q) { showDialog('Thiếu thông tin', 'Vui lòng nhập mã lịch hẹn!'); return; }
+        const inv = invoicesMap[q] || invoicesMap[q.replace(/^LH0*/, '')];
+        if (!inv) { showDialog('Không tìm thấy', `Không tìm thấy lịch hẹn "${q}".`); return; }
+        if (!inv.canPay && !inv.isPaid) {
+            showDialog('Chưa đủ điều kiện thu phí', `Lịch hẹn ${inv.code} đang ở trạng thái "${inv.statusText}". Chỉ thu tiền khi bệnh nhân đã check-in / đến khám.`);
+            return;
+        }
+        currentInvoice = inv;
+        const card = document.getElementById('invoice-card');
+        card.style.display = 'block';
+        document.getElementById('invoice-id').textContent = `HD-${inv.rawId.toString().padStart(4, '0')}`;
+        document.getElementById('invoice-date').textContent = inv.dateDisplay;
+        document.getElementById('inv-patient').textContent = inv.code;
+        document.getElementById('inv-doctor').textContent = inv.doctor;
+        document.getElementById('inv-ca').textContent = inv.time;
+        document.getElementById('inv-specialty').textContent = inv.specialty;
+
+        const stBadge = document.getElementById('inv-status');
+        stBadge.textContent = inv.isPaid ? 'Đã thanh toán' : 'Chờ thanh toán';
+        stBadge.className = 'invoice-status-badge' + (inv.isPaid ? ' paid' : '');
+
+        document.getElementById('invoice-items').innerHTML = (inv.items || []).map(it =>
+            `<tr><td>${it.name}</td><td>${it.qty}</td><td>${fmtMoney(it.price)}</td><td>${fmtMoney(it.qty * it.price)}</td></tr>`).join('');
+        document.getElementById('inv-total').textContent = fmtMoney(calcTotal(inv.items));
+
+        document.getElementById('invoice-actions').innerHTML = inv.isPaid
+            ? `<button type="button" class="btn btn-outline" onclick="window.print()"><i class="fas fa-print"></i> In hóa đơn</button>`
+            : `<button type="button" class="btn btn-outline" onclick="window.print()"><i class="fas fa-print"></i> In hóa đơn</button>
+               <button type="button" class="btn btn-success" onclick="confirmPayment()"><i class="fas fa-check-circle"></i> Xác nhận đã thu tiền mặt</button>`;
+    };
+
+    window.confirmPayment = function () {
+        if (!currentInvoice || currentInvoice.isPaid) return;
+        const total = calcTotal(currentInvoice.items);
+        showDialog('Xác nhận thu tiền mặt', `Xác nhận đã thu ${fmtMoney(total)} cho lịch hẹn ${currentInvoice.code}?`, async () => {
+            const headers = { 'Content-Type': 'application/json' };
+            if (antiForgeryToken) headers['RequestVerificationToken'] = antiForgeryToken;
+            try {
+                const res = await fetch(urls.confirmPay, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ lich_hen_id: currentInvoice.rawId, tong_tien: total, phuong_thuc: 'Tiền mặt' })
+                });
+                const r = await res.json();
+                if (!res.ok || !r.success) { showDialog('Lỗi', r.detail || 'Không thể lưu thanh toán.'); return; }
+                await loadData();
+                searchInvoice();
+                showDialog('Thành công', `Đã thu ${fmtMoney(total)} cho ${currentInvoice.code}.`);
+            } catch (e) { showDialog('Lỗi', 'Lỗi kết nối máy chủ.'); }
+        });
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await loadData();
+        const idParam = new URLSearchParams(window.location.search).get('id');
+        if (idParam) quickOpen(idParam);
+    });
+</script>
+</body>
+</html>

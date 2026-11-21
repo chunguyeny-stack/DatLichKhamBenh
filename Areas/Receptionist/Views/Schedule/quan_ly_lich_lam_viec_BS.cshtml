@@ -1,0 +1,464 @@
+@using System.Collections.Generic
+@{
+    Layout = null;
+    string receptionistName = ViewBag.ReceptionistName ?? "Lễ tân";
+    string initials = receptionistName.Trim().Length >= 2 ? receptionistName.Trim().Substring(0, 2).ToUpper() : receptionistName.Trim().ToUpper();
+    string cloverLogoUrl = Url.Content("~/static/images/logo-clover.png");
+
+    string urlTongQuan = Url.Action("Index", "dashboard_le_tan", new { area = "Receptionist" }) ?? "/Receptionist/dashboard_le_tan";
+    string urlQuanLyLichHen = Url.Action("Index", "quan_ly_lich_hen_BN", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_hen_BN";
+    string urlDanhSachCaTruc = Url.Action("Index", "quan_ly_lich_lam_viec_BS", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_lam_viec_BS";
+    string urlVienPhi = Url.Action("Index", "vien_phi", new { area = "Receptionist" }) ?? "/Receptionist/vien_phi";
+    string urlHoSoCaNhan = Url.Action("Index", "ho_so_ca_nhan_le_tan", new { area = "Receptionist" }) ?? "/Receptionist/ho_so_ca_nhan_le_tan";
+
+    string urlGetDoctors = Url.Action("GetDoctors", "quan_ly_lich_lam_viec_BS", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_lam_viec_BS/GetDoctors";
+    string urlGetSchedules = Url.Action("GetSchedules", "quan_ly_lich_lam_viec_BS", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_lam_viec_BS/GetSchedules";
+    string urlCreateSchedule = Url.Action("CreateSchedule", "quan_ly_lich_lam_viec_BS", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_lam_viec_BS/CreateSchedule";
+    string urlUpdateSchedule = Url.Action("UpdateSchedule", "quan_ly_lich_lam_viec_BS", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_lam_viec_BS/UpdateSchedule";
+    string urlDeleteSchedule = Url.Action("DeleteSchedule", "quan_ly_lich_lam_viec_BS", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_lam_viec_BS/DeleteSchedule";
+    string urlGetAppointments = Url.Action("GetAppointments", "quan_ly_lich_lam_viec_BS", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_lam_viec_BS/GetAppointments";
+
+    string tempSuccess = TempData["Success"]?.ToString() ?? "";
+    string tempError = TempData["Error"]?.ToString() ?? "";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediSlot - Quản lý Lịch làm việc Bác sĩ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="~/static/css/LT_BS.css" asp-append-version="true">
+    <style>
+        :root {
+            --bg-body: #f4f7fb; --bg-card: #ffffff; --text-color: #1e293b; --text-gray: #64748b;
+            --secondary-color: #0f172a; --border-color: #e2e8f0; --primary-blue: #2563eb;
+            --primary-blue-light: #eff6ff; --primary-blue-soft: rgba(37, 99, 235, 0.08);
+            --accent-green: #10b981; --accent-orange: #f59e0b; --accent-red: #ef4444;
+            --border-radius: 16px; --shadow-soft: 0 6px 24px rgba(15, 23, 42, 0.05); --shell-max: 1480px; --shell-pad: 24px;
+        }
+        html, body { max-width: 100%; overflow-x: hidden; margin: 0; font-family: 'Poppins', sans-serif; background: var(--bg-body); color: var(--text-color); }
+        header {
+            width: calc(100% - var(--shell-pad) * 2) !important; max-width: var(--shell-max) !important; margin: 10px auto 15px !important;
+            padding: 10px 24px !important; display: flex !important; justify-content: space-between !important; align-items: center !important;
+            flex-wrap: wrap !important; gap: 12px !important; background: var(--bg-card); border-radius: 14px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); box-sizing: border-box !important;
+        }
+        .logo-container, .footer-logo { display: flex; align-items: center; gap: 12px; }
+        .footer-logo { justify-content: center; }
+        .brand-clover { width: 42px; height: 42px; border-radius: 12px; background: #fff; border: 1px solid var(--border-color); padding: 4px; box-sizing: border-box; flex-shrink: 0; overflow: hidden; }
+        .brand-clover img, .brand-clover svg { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .brand-title { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.15; background: linear-gradient(135deg, var(--primary-blue) 0%, #6366f1 55%, #ec4899 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .logo-text p { margin: 0; font-size: 11.5px; color: var(--text-gray); }
+        header nav ul { display: flex !important; gap: 14px !important; align-items: center !important; flex-wrap: wrap !important; margin: 0 !important; padding: 0 !important; list-style: none !important; }
+        header nav ul li a { font-size: 13.5px !important; font-weight: 500; white-space: nowrap !important; padding: 8px 12px !important; color: var(--text-color); text-decoration: none; border-radius: 8px; }
+        header nav ul li a:hover { background: var(--primary-blue-soft); color: var(--primary-blue); }
+        .header-right, .user-badge, .filter-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .user-badge { cursor: pointer; white-space: nowrap !important; padding: 6px 14px !important; border-radius: 999px; background: var(--bg-body); border: 1px solid var(--border-color); }
+        .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--primary-blue); color: #fff; font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .user-name { font-size: 13.5px !important; font-weight: 600; max-width: 140px !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+        .user-role { font-size: 11px; color: var(--text-gray); }
+        .logout-btn { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #EF4444; font-size: 16px; }
+        .logout-btn:hover { background: #EF4444; color: #fff; }
+        main { width: 100%; max-width: var(--shell-max); margin: 16px auto 80px; padding: 0 var(--shell-pad); box-sizing: border-box; }
+        .page-title { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; }
+        .page-title-left h2 { margin: 0; font-size: 24px; color: var(--secondary-color); }
+        .toast-alert { padding: 12px 16px; border-radius: 12px; margin-bottom: 18px; font-size: 13.5px; font-weight: 500; }
+        .toast-success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .toast-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+        .stat-card { background: var(--bg-card); padding: 18px; border-radius: var(--border-radius); box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 14px; cursor: pointer; min-width: 0; }
+        .stat-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--primary-blue-light); color: var(--primary-blue); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .stat-card.red .stat-icon { background: rgba(239, 68, 68, 0.12); color: #EF4444; }
+        .stat-card.orange .stat-icon { background: rgba(217, 119, 6, 0.12); color: #D97706; }
+        .stat-card.green .stat-icon { background: rgba(16, 185, 129, 0.12); color: #10B981; }
+        .stat-info h4 { margin: 0 0 2px; font-size: 20px; font-weight: 700; }
+        .stat-info p { margin: 0; font-size: 12.5px; color: var(--text-gray); }
+        .filter-bar { background: var(--bg-card); border-radius: var(--border-radius); padding: 18px 22px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); margin-bottom: 22px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 14px; align-items: end; }
+        .filter-bar .form-group { margin-bottom: 0; min-width: 0; }
+        .filter-bar label, .modal-box label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; color: var(--secondary-color); }
+        .filter-bar select, .filter-bar input { width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-body); color: var(--text-color); font-family: 'Poppins', sans-serif; font-size: 13px; box-sizing: border-box; }
+        .search-input-wrapper { position: relative; }
+        .search-input-wrapper i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-gray); font-size: 13px; pointer-events: none; }
+        .search-input-wrapper input { padding-left: 36px !important; }
+        .schedule-matrix-container { background: var(--bg-card); border-radius: var(--border-radius); box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); overflow-x: auto; margin-bottom: 28px; }
+        .matrix-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12.5px; table-layout: fixed; min-width: 980px; }
+        .matrix-table th, .matrix-table td { padding: 10px 8px; border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); vertical-align: top; word-wrap: break-word; }
+        .matrix-table th:last-child, .matrix-table td:last-child { border-right: none; }
+        .matrix-table th { background: var(--primary-blue-light); color: var(--primary-blue); font-weight: 600; text-align: center; }
+        .doc-cell { font-weight: 600; color: var(--secondary-color); display: flex; align-items: center; gap: 8px; }
+        .doc-avatar-small { width: 32px; height: 32px; background: var(--primary-blue); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+        .shift-badge-box { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 7px 8px; margin-bottom: 6px; font-size: 11px; }
+        .shift-badge-box.sang { border-left: 3px solid #2563EB; }
+        .shift-badge-box.chieu { border-left: 3px solid #D97706; }
+        .shift-badge-box.toi { border-left: 4px solid #7C3AED; }
+        .shift-badge-box.ban { border-left: 4px solid #EF4444; background: rgba(239, 68, 68, 0.06); }
+        .shift-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+        .shift-name-tag { font-weight: 600; font-size: 11px; }
+        .sang-text { color: #2563EB; } .chieu-text { color: #D97706; } .toi-text { color: #7C3AED; } .ban-text { color: #EF4444; }
+        .shift-actions-mini { display: flex; gap: 6px; font-size: 11px; }
+        .shift-actions-mini i { cursor: pointer; opacity: 0.75; }
+        .shift-actions-mini i:hover { opacity: 1; }
+        .day-cell { text-align: center; }
+        .quick-days-container { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 10px; }
+        .day-select-btn { background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 2px; text-align: center; cursor: pointer; font-size: 11px; color: var(--text-color); }
+        .day-select-btn.active { background: var(--primary-blue); color: #fff; border-color: var(--primary-blue); font-weight: 600; }
+        .multi-shift-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .shift-checkbox-card { background: var(--bg-body); border: 2px solid var(--border-color); border-radius: 12px; padding: 12px 10px; text-align: center; cursor: pointer; }
+        .shift-checkbox-card.selected { background: var(--primary-blue-light); border-color: var(--primary-blue); color: var(--primary-blue); font-weight: 600; }
+        .shift-checkbox-card.disabled { opacity: 0.45; background: #e2e8f0; cursor: not-allowed; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: var(--bg-card); color: var(--text-color); padding: 24px; border-radius: var(--border-radius); width: 100%; max-width: 600px; max-height: 88vh; overflow-y: auto; box-sizing: border-box; }
+        footer { width: calc(100% - var(--shell-pad) * 2); max-width: var(--shell-max); margin: 36px auto 24px; padding: 28px; box-sizing: border-box; background: var(--bg-card); border-radius: var(--border-radius); border: 1px solid var(--border-color); display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; font-size: 13px; color: var(--text-gray); text-align: center; }
+        footer > div { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        footer h4 { margin: 0 0 12px; color: var(--secondary-color); }
+        body.is-narrow .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        body.is-narrow .filter-bar { grid-template-columns: 1fr; }
+        @@media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .filter-bar { grid-template-columns: 1fr 1fr; } }
+        @@media (max-width: 768px) { .stats-grid, .filter-bar { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<header>
+    <div class="logo-container">
+        <div class="brand-clover">
+            <img src="@cloverLogoUrl" alt="MediSlot" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+            <svg viewBox="0 0 100 100" style="display:none;"><path d="M46 46 C46 28, 22 24, 16 38 C12 48, 26 56, 46 46 Z" fill="#cfa0e3" /><path d="M54 46 C54 28, 78 24, 84 38 C88 48, 74 56, 54 46 Z" fill="#77b82a" /><path d="M46 54 C46 72, 22 76, 16 62 C12 52, 26 44, 46 54 Z" fill="#239be7" /><path d="M54 54 C54 72, 78 76, 84 62 C88 52, 74 44, 54 54 Z" fill="none" stroke="#e5a9b5" stroke-width="4" /></svg>
+        </div>
+        <div class="logo-text"><h1 class="brand-title">MediSlot</h1><p>Cổng Lễ Tân</p></div>
+    </div>
+    <div class="header-right">
+        <nav>
+            <ul>
+                <li><a href="@urlTongQuan">Tổng quan</a></li>
+                <li><a href="@urlQuanLyLichHen">Quản lý lịch hẹn</a></li>
+                <li><a href="@urlDanhSachCaTruc"><strong>Danh sách ca trực</strong></a></li>
+                <li><a href="@urlVienPhi">Viện phí</a></li>
+            </ul>
+        </nav>
+        <div class="user-badge" onclick="window.location.href='@urlHoSoCaNhan'" title="Hồ sơ cá nhân lễ tân">
+            <div class="user-avatar">@initials</div>
+            <div><div class="user-name">@receptionistName</div><div class="user-role">Lễ tân</div></div>
+        </div>
+        <button type="button" class="logout-btn" onclick="window.location.href='/Account/Login'" title="Đăng xuất"><i class="fas fa-sign-out-alt"></i></button>
+    </div>
+</header>
+
+<main>
+    <div class="breadcrumb"><a href="@urlTongQuan"><i class="fas fa-home"></i> Tổng quan</a><i class="fas fa-chevron-right"></i><span>Danh sách ca trực</span></div>
+    @if (!string.IsNullOrWhiteSpace(tempSuccess)) { <div class="toast-alert toast-success"><i class="fas fa-check-circle"></i> @tempSuccess</div> }
+    @if (!string.IsNullOrWhiteSpace(tempError)) { <div class="toast-alert toast-error"><i class="fas fa-exclamation-circle"></i> @tempError</div> }
+
+    <div class="page-title">
+        <div class="page-title-left"><h2><i class="fas fa-calendar-alt"></i> Quản lý Lịch làm việc Bác sĩ (Ca trực)</h2></div>
+        <button type="button" class="btn btn-primary" onclick="openAddModal()"><i class="fas fa-plus"></i> Tạo Lịch Tuần Dự Kiến</button>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card red" onclick="filterByStat('bac_si_huy')"><div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div><div class="stat-info"><h4 id="stat-ly-do-ban">0</h4><p>Số ca bận của bác sĩ</p></div></div>
+        <div class="stat-card orange" onclick="filterByStat('lich_xung_dot')"><div class="stat-icon"><i class="fas fa-calendar-xmark"></i></div><div class="stat-info"><h4 id="stat-lich-xung-dot">0</h4><p>Lịch khám trùng ngày bận</p></div></div>
+        <div class="stat-card green" onclick="filterByStat('da_xac_nhan')"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h4 id="stat-da-xac-nhan">0</h4><p>Đã xác nhận (Chính thức)</p></div></div>
+        <div class="stat-card purple" onclick="filterByStat('co_lich_hen')"><div class="stat-icon"><i class="fas fa-users"></i></div><div class="stat-info"><h4 id="stat-ca-co-lich">0</h4><p>Ca trực có lịch hẹn</p></div></div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="form-group"><label for="filter-doctor">Chọn bác sĩ</label><select id="filter-doctor" onchange="applyFilter()"><option value="all">-- Tất cả bác sĩ --</option></select></div>
+        <div class="form-group"><label for="filter-date">Lọc theo tuần (Chọn ngày)</label><input type="date" id="filter-date" onchange="applyFilter()"></div>
+        <div class="form-group">
+            <label for="filter-status">Trạng thái lịch</label>
+            <select id="filter-status" onchange="applyFilter()">
+                <option value="all">-- Tất cả trạng thái --</option>
+                <option value="bac_si_huy">Đã báo bận</option>
+                <option value="lich_xung_dot">Ca bận có lịch hẹn trùng</option>
+                <option value="da_xac_nhan">Đã xác nhận</option>
+                <option value="co_lich_hen">Chỉ ca có lịch hẹn bệnh nhân</option>
+            </select>
+        </div>
+        <div class="form-group"><label for="filter-keyword">Tìm kiếm</label><div class="search-input-wrapper"><i class="fas fa-search"></i><input type="text" id="filter-keyword" placeholder="Tên bác sĩ..." oninput="applyFilter()"></div></div>
+        <div class="filter-actions"><button type="button" class="btn btn-outline" onclick="resetFilter()"><i class="fas fa-redo"></i> Đặt lại</button></div>
+    </div>
+
+    <div id="schedule-matrix-wrapper"></div>
+</main>
+
+<footer>
+    <div>
+        <div class="footer-logo">
+            <div class="brand-clover"><img src="@cloverLogoUrl" alt="MediSlot" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" /><svg viewBox="0 0 100 100" style="display:none;"><path d="M46 46 C46 28, 22 24, 16 38 C12 48, 26 56, 46 46 Z" fill="#cfa0e3" /><path d="M54 46 C54 28, 78 24, 84 38 C88 48, 74 56, 54 46 Z" fill="#77b82a" /><path d="M46 54 C46 72, 22 76, 16 62 C12 52, 26 44, 46 54 Z" fill="#239be7" /><path d="M54 54 C54 72, 78 76, 84 62 C88 52, 74 44, 54 54 Z" fill="none" stroke="#e5a9b5" stroke-width="4" /></svg></div>
+            <div class="logo-text"><h1 class="brand-title">MediSlot</h1><p>Cổng Lễ Tân</p></div>
+        </div>
+        <p>Hệ thống quản lý y tế MediSlot - Giải pháp toàn diện cho bệnh viện và phòng khám.</p>
+        <p><strong>"MediSlot chúc quý khách và gia đình luôn có một sức khỏe dồi dào!"</strong></p>
+    </div>
+    <div><h4>Thông tin liên hệ</h4><p>Địa chỉ: Số 15, Phố Dịch Vọng Hậu, Quận Cầu Giấy, Hà Nội</p><p>Hotline: 1900 6868</p><p>Email: support@medislot.vn</p></div>
+</footer>
+
+<div class="modal-overlay" id="schedule-modal">
+    <div class="modal-box">
+        <h3 id="modal-title" style="color:var(--primary-blue); margin-bottom:15px;">Tạo Lịch Làm Việc Dự Kiến (Cả Tuần)</h3>
+        <input type="hidden" id="edit-schedule-id">
+        <div class="form-group" style="margin-bottom:15px;"><label for="sched-doctor">Chọn bác sĩ:</label><select id="sched-doctor" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-body); color:var(--text-color);" onchange="updateShiftCardAvailability()"></select></div>
+        <div class="form-group" style="margin-bottom:12px;"><label>Chọn ngày trong tuần:</label><div class="quick-days-container" id="quick-days-bar"></div></div>
+        <div class="form-group" style="margin-bottom:15px;"><label for="sched-date">Ngày đang chọn:</label><input type="date" id="sched-date" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:10px; background:var(--bg-body); color:var(--text-color); box-sizing:border-box;" onchange="onDateInputChanged(this.value)"></div>
+        <div class="form-group" style="margin-bottom:15px;">
+            <label>Chọn ca làm việc cho ngày này (Ca nào đã có sẽ bị ẩn):</label>
+            <div class="multi-shift-container">
+                <div class="shift-checkbox-card" id="card-shift-sang" onclick="toggleShiftCard('Ca sáng')"><input type="checkbox" id="chk-shift-sang" value="Ca sáng" onchange="saveCurrentDayShifts()"><i class="fas fa-sun"></i><div>Ca Sáng</div><div style="font-size:10px; opacity:0.8;">07:30 - 11:30</div></div>
+                <div class="shift-checkbox-card" id="card-shift-chieu" onclick="toggleShiftCard('Ca chiều')"><input type="checkbox" id="chk-shift-chieu" value="Ca chiều" onchange="saveCurrentDayShifts()"><i class="fas fa-cloud-sun"></i><div>Ca Chiều</div><div style="font-size:10px; opacity:0.8;">13:30 - 18:30</div></div>
+                <div class="shift-checkbox-card" id="card-shift-toi" onclick="toggleShiftCard('Ca tối')"><input type="checkbox" id="chk-shift-toi" value="Ca tối" onchange="saveCurrentDayShifts()"><i class="fas fa-moon"></i><div>Ca Tối</div><div style="font-size:10px; opacity:0.8;">18:30 - 22:30</div></div>
+            </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn btn-outline" onclick="closeScheduleModal()">Hủy bỏ</button>
+            <button type="button" class="btn btn-primary" onclick="saveAllSchedulesDB()"><i class="fas fa-save"></i> Lưu thông tin</button>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<script>
+    function syncViewportLayout() { document.body.classList.toggle('is-narrow', window.innerWidth < 1180); }
+    window.addEventListener('resize', syncViewportLayout);
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(syncViewportLayout).observe(document.body);
+    syncViewportLayout();
+
+    const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    const urls = {
+        getDoctors: '@urlGetDoctors', getSchedules: '@urlGetSchedules', createSchedule: '@urlCreateSchedule',
+        updateSchedule: '@urlUpdateSchedule', deleteSchedule: '@urlDeleteSchedule',
+        getAppointments: '@urlGetAppointments', appointmentsPage: '@urlQuanLyLichHen'
+    };
+    const shiftDefs = [
+        { name: 'Ca sáng', key: 'sang', start: '07:30', end: '11:30', cls: 'sang sang-text' },
+        { name: 'Ca chiều', key: 'chieu', start: '13:30', end: '18:30', cls: 'chieu chieu-text' },
+        { name: 'Ca tối', key: 'toi', start: '18:30', end: '22:30', cls: 'toi toi-text' }
+    ];
+
+    let pendingShiftsByDate = {}, schedulesList = [], doctorsList = [], allAppointments = [], currentDoctorPage = 1;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    function getConflictingAppointmentsCount(s) {
+        if (!s.lyDoBan) return 0;
+        return allAppointments.filter(a => {
+            if (String(a.ngay_kham) !== String(s.date) || String(a.bac_si_id) !== String(s.doctorId)) return false;
+            const h = parseInt(String(a.khung_gio || '').trim().split(':')[0]) || 0;
+            const sn = s.shift.toLowerCase();
+            return sn.includes('sáng') ? (h >= 7 && h < 12) : (sn.includes('chiều') ? (h >= 12 && h < 18) : (sn.includes('tối') ? h >= 18 : true));
+        }).length;
+    }
+
+    function getMatchedAppointments(s) {
+        return allAppointments.filter(appt => {
+            if (String(appt.ngay_kham) !== String(s.date) || String(appt.bac_si_id) !== String(s.doctorId)) return false;
+            const startAppt = String(appt.khung_gio || '').trim().split('-')[0].trim();
+            if (!startAppt) return false;
+            return s.shift === 'Ca sáng' ? startAppt < '12:00' : (s.shift === 'Ca chiều' ? (startAppt >= '12:00' && startAppt < '18:30') : startAppt >= '18:30');
+        });
+    }
+
+    window.filterByStat = function (v) { document.getElementById('filter-status').value = v; currentDoctorPage = 1; renderScheduleMatrix(); };
+    window.jumpToAppointment = function (apptId) { sessionStorage.setItem('jump_appt_id', apptId); window.location.href = urls.appointmentsPage; };
+
+    window.updateShiftCardAvailability = function () {
+        const docId = document.getElementById('sched-doctor').value, dateStr = document.getElementById('sched-date').value;
+        shiftDefs.forEach(sd => { document.getElementById(`chk-shift-${sd.key}`).disabled = false; document.getElementById(`card-shift-${sd.key}`).classList.remove('disabled'); });
+        if (!docId || !dateStr) return;
+        schedulesList.filter(s => String(s.doctorId) === String(docId) && s.date === dateStr).forEach(es => {
+            const sd = shiftDefs.find(x => x.name === es.shift);
+            if (sd) {
+                const chk = document.getElementById(`chk-shift-${sd.key}`), card = document.getElementById(`card-shift-${sd.key}`);
+                chk.checked = false; chk.disabled = true; card.classList.remove('selected'); card.classList.add('disabled');
+            }
+        });
+    };
+
+    function renderQuickDaysBar(targetDateStr) {
+        const bar = document.getElementById('quick-days-bar'); if (!bar) return;
+        const t = targetDateStr ? new Date(targetDateStr) : new Date();
+        const mon = new Date(t); mon.setDate(t.getDate() + (t.getDay() === 0 ? -6 : 1 - t.getDay()));
+        const days = ['Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7', 'CN'];
+        bar.innerHTML = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(mon); d.setDate(mon.getDate() + i); const ds = d.toISOString().split('T')[0];
+            return `<div class="day-select-btn ${ds === targetDateStr ? 'active' : ''}" onclick="selectQuickDay('${ds}')"><div style="font-weight:600;">${days[i]}</div><div style="font-size:10px; opacity:.8;">${d.getDate()}/${d.getMonth() + 1}</div></div>`;
+        }).join('');
+    }
+
+    window.selectQuickDay = function (ds) { saveCurrentDayShifts(); document.getElementById('sched-date').value = ds; renderQuickDaysBar(ds); loadShiftsForDate(ds); updateShiftCardAvailability(); };
+    window.onDateInputChanged = function (ds) { if (ds) window.selectQuickDay(ds); };
+
+    window.saveCurrentDayShifts = function () {
+        const d = document.getElementById('sched-date').value; if (!d) return;
+        const chosen = shiftDefs.filter(sd => { const c = document.getElementById(`chk-shift-${sd.key}`); return c.checked && !c.disabled; }).map(sd => ({ name: sd.name, start: sd.start, end: sd.end }));
+        if (chosen.length) pendingShiftsByDate[d] = chosen; else delete pendingShiftsByDate[d];
+    };
+
+    window.loadShiftsForDate = function (ds) {
+        shiftDefs.forEach(sd => { document.getElementById(`chk-shift-${sd.key}`).checked = false; document.getElementById(`card-shift-${sd.key}`).classList.remove('selected'); });
+        (pendingShiftsByDate[ds] || []).forEach(s => {
+            const sd = shiftDefs.find(x => x.name === s.name);
+            if (sd && !document.getElementById(`chk-shift-${sd.key}`).disabled) {
+                document.getElementById(`chk-shift-${sd.key}`).checked = true; document.getElementById(`card-shift-${sd.key}`).classList.add('selected');
+            }
+        });
+    };
+
+    window.toggleShiftCard = function (shiftName) {
+        const sd = shiftDefs.find(x => x.name === shiftName); if (!sd) return;
+        const chk = document.getElementById(`chk-shift-${sd.key}`), card = document.getElementById(`card-shift-${sd.key}`);
+        if (chk.disabled) return;
+        chk.checked = !chk.checked; card.classList.toggle('selected', chk.checked); saveCurrentDayShifts();
+    };
+
+    function updateStats(data, monStr, sunStr) {
+        let ban = 0, xd = 0, dxn = 0, cl = 0;
+        data.forEach(s => {
+            if (s.date >= monStr && s.date <= sunStr) {
+                if (s.lyDoBan) { ban++; if (getConflictingAppointmentsCount(s) > 0) xd++; } else dxn++;
+                if (getMatchedAppointments(s).length > 0) cl++;
+            }
+        });
+        document.getElementById('stat-ly-do-ban').textContent = ban;
+        document.getElementById('stat-lich-xung-dot').textContent = xd;
+        document.getElementById('stat-da-xac-nhan').textContent = dxn;
+        document.getElementById('stat-ca-co-lich').textContent = cl;
+    }
+
+    function renderScheduleMatrix() {
+        const wrapper = document.getElementById('schedule-matrix-wrapper');
+        const docFilter = document.getElementById('filter-doctor').value, dateFilter = document.getElementById('filter-date').value;
+        const statusFilter = document.getElementById('filter-status').value, kw = document.getElementById('filter-keyword').value.toLowerCase().trim();
+
+        const base = dateFilter ? new Date(dateFilter) : new Date();
+        const mon = new Date(base); mon.setDate(base.getDate() + (base.getDay() === 0 ? -6 : 1 - base.getDay()));
+        const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+        const monStr = mon.toISOString().split('T')[0], sunStr = sun.toISOString().split('T')[0];
+
+        let filtered = schedulesList.filter(s => s.date >= monStr && s.date <= sunStr);
+        if (docFilter !== 'all') filtered = filtered.filter(s => String(s.doctorId) === String(docFilter));
+        if (statusFilter && statusFilter !== 'all') {
+            filtered = filtered.filter(s => statusFilter === 'bac_si_huy' ? (s.lyDoBan && s.lyDoBan.trim() !== '')
+                : (statusFilter === 'lich_xung_dot' ? (s.lyDoBan && getConflictingAppointmentsCount(s) > 0)
+                : (statusFilter === 'da_xac_nhan' ? !s.lyDoBan : getMatchedAppointments(s).length > 0)));
+        }
+        if (kw) filtered = filtered.filter(s => s.doctorName.toLowerCase().includes(kw));
+        updateStats(schedulesList, monStr, sunStr);
+
+        const labels = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Th 6', 'Th 7', 'Chủ Nhật'];
+        const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return { dateStr: d.toISOString().split('T')[0], label: labels[i], displayNum: `${d.getDate()}/${d.getMonth() + 1}` }; });
+
+        let activeDocs = docFilter !== 'all' ? doctorsList.filter(d => String(d.id) === String(docFilter)) : doctorsList;
+        if (kw) activeDocs = activeDocs.filter(d => d.name.toLowerCase().includes(kw));
+        const totalPages = Math.ceil(activeDocs.length / 10) || 1;
+        currentDoctorPage = Math.min(Math.max(1, currentDoctorPage), totalPages);
+        const start = (currentDoctorPage - 1) * 10;
+
+        let html = `<div class="schedule-matrix-container"><table class="matrix-table"><colgroup><col style="width:170px;"><col span="7" style="width:118px;"></colgroup><thead><tr><th style="text-align:left; padding-left:14px;">Bác Sĩ Chuyên Khoa</th>${weekDays.map(w => `<th>${w.label}<br><span style="font-size:11px; font-weight:400; opacity:.8;">${w.displayNum}</span></th>`).join('')}</tr></thead><tbody>`;
+
+        activeDocs.slice(start, start + 10).forEach(doc => {
+            html += `<tr><td><div class="doc-cell"><div class="doc-avatar-small">${doc.name.replace('BS. ', '').slice(0, 2).toUpperCase()}</div><div><div>${doc.name}</div><div style="font-size:11px; color:var(--text-gray);">ID: #${doc.id}</div></div></div></td>`;
+            weekDays.forEach(wd => {
+                const dayScheds = filtered.filter(s => String(s.doctorId) === String(doc.id) && s.date === wd.dateStr);
+                html += `<td class="day-cell">`;
+                dayScheds.forEach(ds => {
+                    const isBan = Boolean(ds.lyDoBan);
+                    const sd = shiftDefs.find(x => x.name === ds.shift) || shiftDefs[0];
+                    const cls = isBan ? 'ban ban-text' : sd.cls;
+                    const matched = getMatchedAppointments(ds);
+                    html += `<div class="shift-badge-box ${cls}" id="shift-card-${ds.rawId}"><div class="shift-header-row"><span class="shift-name-tag ${cls}">${ds.shift}</span><div class="shift-actions-mini"><i class="fas fa-edit" onclick="editSchedule('${ds.rawId}')"></i><i class="fas fa-trash" onclick="deleteScheduleDB('${ds.rawId}')" style="color:var(--accent-red);"></i></div></div><div style="font-size:11px; font-weight:600;">${ds.startTime} - ${ds.endTime}</div><div style="font-size:9.5px; color:var(--text-gray); text-transform:uppercase; margin-top:2px;">${isBan ? 'Đã báo bận' : 'Đã xác nhận (Chính thức)'}</div>`;
+                    if (matched.length) {
+                        html += `<div style="background:var(--bg-card); border-radius:6px; padding:6px; margin:6px 0; text-align:left; font-size:11px; border:1px dashed var(--border-color);"><strong style="color:var(--primary-blue); display:block; margin-bottom:3px;"><i class="fas fa-users"></i> Lịch hẹn (${matched.length}):</strong>` +
+                            matched.map(ma => `<div style="margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; color:var(--primary-blue);" onclick="jumpToAppointment('${ma.ma_lich_hen || ma.id}')">• <b>${ma.benh_nhan || ma.ma_lich_hen || ma.id}</b> (${ma.khung_gio})</div>`).join('') + `</div>`;
+                    } else html += `<div style="font-size:10.5px; color:var(--text-gray); font-style:italic; margin:4px 0;">Chưa có bệnh nhân</div>`;
+                    html += `</div>`;
+                });
+                if (!dayScheds.length) html += `<span style="color:var(--text-gray); font-size:11px; opacity:.4;">-- Nghỉ --</span>`;
+                html += `</td>`;
+            });
+            html += `</tr>`;
+        });
+        html += `</tbody></table>`;
+
+        if (totalPages > 1) {
+            html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 20px; background:var(--bg-card); border-top:1px solid var(--border-color);"><div style="font-size:13px; color:var(--text-gray);">Hiển thị bác sĩ ${start + 1}–${Math.min(start + 10, activeDocs.length)} / ${activeDocs.length}</div><div style="display:flex; gap:5px;"><button type="button" class="btn btn-outline" style="padding:6px 12px; font-size:12px;" ${currentDoctorPage === 1 ? 'disabled' : ''} onclick="changeDoctorPage(${currentDoctorPage - 1})">Trước</button>` +
+                Array.from({ length: totalPages }, (_, i) => i + 1).map(p => `<button type="button" class="btn btn-outline" style="padding:6px 12px; font-size:12px; ${p === currentDoctorPage ? 'background:var(--primary-blue); color:#fff; border-color:var(--primary-blue);' : ''}" onclick="changeDoctorPage(${p})">${p}</button>`).join('') +
+                `<button type="button" class="btn btn-outline" style="padding:6px 12px; font-size:12px;" ${currentDoctorPage === totalPages ? 'disabled' : ''} onclick="changeDoctorPage(${currentDoctorPage + 1})">Sau</button></div></div>`;
+        }
+        wrapper.innerHTML = html + `</div>`;
+    }
+
+    window.changeDoctorPage = function (p) { currentDoctorPage = p; renderScheduleMatrix(); };
+    window.openAddModal = function () { document.getElementById('modal-title').textContent = 'Tạo Lịch Làm Việc Dự Kiến (Cả Tuần)'; document.getElementById('edit-schedule-id').value = ''; pendingShiftsByDate = {}; document.getElementById('sched-date').value = todayStr; renderQuickDaysBar(todayStr); updateShiftCardAvailability(); document.getElementById('schedule-modal').classList.add('active'); };
+    window.closeScheduleModal = () => document.getElementById('schedule-modal').classList.remove('active');
+
+    window.editSchedule = function (rawId) {
+        const item = schedulesList.find(s => String(s.rawId) === String(rawId)); if (!item) return;
+        document.getElementById('modal-title').textContent = 'Chỉnh sửa Lịch Làm Việc'; document.getElementById('edit-schedule-id').value = item.rawId; document.getElementById('sched-doctor').value = item.doctorId;
+        pendingShiftsByDate = { [item.date]: [{ name: item.shift, start: item.startTime, end: item.endTime }] };
+        document.getElementById('sched-date').value = item.date; renderQuickDaysBar(item.date); updateShiftCardAvailability(); loadShiftsForDate(item.date); document.getElementById('schedule-modal').classList.add('active');
+    };
+
+    window.saveAllSchedulesDB = async function () {
+        saveCurrentDayShifts();
+        const editId = document.getElementById('edit-schedule-id').value, bacSiId = document.getElementById('sched-doctor').value, datesArr = Object.keys(pendingShiftsByDate);
+        if (!datesArr.length) { alert('Vui lòng chọn ca trực!'); return; }
+        const headers = { 'Content-Type': 'application/json' }; if (antiForgeryToken) headers['RequestVerificationToken'] = antiForgeryToken;
+        try {
+            if (editId) {
+                const s = pendingShiftsByDate[datesArr[0]][0];
+                await fetch(`${urls.updateSchedule}/${editId}`, { method: 'PUT', headers, body: JSON.stringify({ bac_si_id: bacSiId, ngay_lam_viec: datesArr[0], ca_lam_viec: s.name, gio_bat_dau: s.start, gio_ket_thuc: s.end, trang_thai: 'da_xac_nhan' }) });
+            } else {
+                for (const dk of datesArr) for (const s of pendingShiftsByDate[dk]) await fetch(urls.createSchedule, { method: 'POST', headers, body: JSON.stringify({ bac_si_id: bacSiId, ngay_lam_viec: dk, ca_lam_viec: s.name, gio_bat_dau: s.start, gio_ket_thuc: s.end, trang_thai: 'da_xac_nhan' }) });
+            }
+            closeScheduleModal(); window.fetchSchedulesFromDB();
+        } catch (e) { alert('Không thể lưu lịch làm việc.'); }
+    };
+
+    window.deleteScheduleDB = async function (rawId) {
+        if (!confirm('Bạn có chắc chắn muốn xóa lịch làm việc này không?')) return;
+        const headers = {}; if (antiForgeryToken) headers['RequestVerificationToken'] = antiForgeryToken;
+        try {
+            const res = await fetch(`${urls.deleteSchedule}/${rawId}`, { method: 'DELETE', headers }); const r = await res.json();
+            if (res.ok && r.success) { schedulesList = schedulesList.filter(s => String(s.rawId) !== String(rawId)); renderScheduleMatrix(); }
+            else alert(r.detail || 'Không thể xóa lịch làm việc.');
+        } catch (e) { alert('Lỗi kết nối đến máy chủ khi xóa.'); }
+    };
+
+    window.applyFilter = function () { currentDoctorPage = 1; renderScheduleMatrix(); };
+    window.resetFilter = function () { document.getElementById('filter-doctor').value = 'all'; document.getElementById('filter-date').value = ''; document.getElementById('filter-status').value = 'all'; document.getElementById('filter-keyword').value = ''; currentDoctorPage = 1; renderScheduleMatrix(); };
+
+    document.addEventListener('DOMContentLoaded', async function () {
+        try { const r = await fetch(urls.getAppointments); if (r.ok) { const j = await r.json(); allAppointments = j.data || j || []; } } catch (e) {}
+        try {
+            const r = await fetch(urls.getDoctors);
+            if (r.ok) {
+                doctorsList = await r.json();
+                [document.getElementById('filter-doctor'), document.getElementById('sched-doctor')].forEach((sel, i) => {
+                    if (sel) sel.innerHTML = (i === 0 ? '<option value="all">-- Tất cả bác sĩ --</option>' : '') + doctorsList.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+                });
+            }
+        } catch (e) {}
+
+        window.fetchSchedulesFromDB = async function () {
+            try {
+                const r = await fetch(urls.getSchedules); if (!r.ok) return;
+                const raw = await r.json(), map = {};
+                raw.forEach(item => {
+                    const rawId = String(item.id || ''), startT = String(item.gio_bat_dau || item.khung_gio || '07:30').split(' - ')[0].trim();
+                    const shiftName = (startT >= '18:30' || String(item.khung_gio || '').includes('TỐI')) ? 'Ca tối' : ((startT >= '12:00' || String(item.khung_gio || '').includes('CHIỀU')) ? 'Ca chiều' : 'Ca sáng');
+                    const sd = shiftDefs.find(x => x.name === shiftName) || shiftDefs[0], lyDoBanm = item.ly_do_ban || item.ly_do || '', dateStr = item.ngay_lam_viec || item.ngay_kham || '', docIdVal = String(item.bac_si_id || '');
+                    const key = `${docIdVal}_${dateStr}_${shiftName}`;
+                    if (!map[key]) map[key] = { id: 'LICH' + rawId.padStart(3, '0'), rawId, doctorId: docIdVal, doctorName: item.doctorName || item.ho_ten || 'Bác sĩ', date: dateStr, shift: shiftName, startTime: sd.start, endTime: sd.end, lyDoBan: lyDoBanm };
+                    else if (lyDoBanm) map[key].lyDoBan = lyDoBanm;
+                });
+                schedulesList = Object.values(map); renderScheduleMatrix();
+            } catch (e) {}
+        };
+
+        renderQuickDaysBar(todayStr); window.fetchSchedulesFromDB();
+    });
+</script>
+</body>
+</html>

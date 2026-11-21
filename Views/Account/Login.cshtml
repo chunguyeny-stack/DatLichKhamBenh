@@ -11,13 +11,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(ViewData["Title"]) - MediSlot</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <!-- Thêm Bootstrap Icons để lấy icon con mắt -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        /* CSS cho toàn bộ trang */
         body {
-            background: url('https://i.pinimg.com/1200x/de/7f/79/de7f7963f12bfd74d5f94be340e4381e.jpg') no-repeat center center fixed;
-            background-size: cover;
+            background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 50%, #f8fafc 100%);
             font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
             height: 100vh;
             display: flex;
@@ -26,7 +23,6 @@
             margin: 0;
             color: #1b1b1b;
         }
-        /* CSS cho container kính mờ */
         .glass-container {
             background: rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(20px);
@@ -35,15 +31,14 @@
             max-width: 440px;
             padding: 44px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            border-radius: 8px; /* Bo góc cho container */
+            border-radius: 8px;
             border: 1px solid rgba(255, 255, 255, 0.7);
+            position: relative;
         }
-        /* CSS cho phần logo */
         .logo-header { display: flex; align-items: center; margin-bottom: 24px; }
         .logo-img { height: 34px; margin-right: 12px; }
         .logo-text { font-size: 1.5rem; font-weight: 600; color: #5e5e5e; letter-spacing: -0.5px; }
         h2 { font-size: 1.75rem; font-weight: 600; margin-bottom: 28px; color: #1a1a1a; }
-        /* CSS cho các input và nút */
         .form-control {
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -53,15 +48,12 @@
             box-shadow: none;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        /* CSS cho nút đăng nhập */
         .form-control:focus {
             border-color: #0067b8;
             outline: none;
             box-shadow: 0 0 0 1px #0067b8;
         }
-
         .form-control::placeholder { color: #767676; font-size: 0.95rem; }
-        /* CSS cho nút đăng nhập */
         .btn-primary {
             background-color: #0067b8;
             border: 1px solid #0067b8;
@@ -71,12 +63,20 @@
             font-weight: 600;
             font-size: 1rem;
             transition: background-color 0.2s;
-            margin-top: 8px; /* Thêm khoảng cách trên nút đăng nhập */
+            margin-top: 8px;
             color: #ffffff !important;
         }
-        
         .btn-primary:hover { background-color: #005da6; border-color: #005da6; color: #ffffff !important; }
-        /* CSS cho nút đăng nhập bằng Google */
+        .btn-back {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #1b1b1b;
+            font-size: 1.2rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .btn-back:hover { color: #0067b8; }
         .btn-google {
             background-color: #fff;
             border: 1px solid #8c8c8c;
@@ -93,9 +93,7 @@
             margin-top: 16px;
             transition: background-color 0.2s;
         }
-        
         .btn-google:hover { background-color: #f3f2f1; border-color: #8c8c8c; }
-        /* CSS cho phần "hoặc" */
         .divider {
             display: flex;
             align-items: center;
@@ -104,16 +102,12 @@
             color: #666;
             font-size: 0.9rem;
         }
-        /* Các đường kẻ bên trái và bên phải của "hoặc" */
         .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #d1d1d1; }
         .divider:not(:empty)::before { margin-right: 12px; }
         .divider:not(:empty)::after { margin-left: 12px; }
-
         .links a { color: #0067b8; text-decoration: none; font-size: 0.95rem; }
         .links a:hover { text-decoration: underline; }
         .form-check-label { font-size: 0.95rem; color: #1b1b1b; }
-
-        /* CSS cho icon con mắt */
         .password-wrapper { position: relative; }
         .toggle-password {
             position: absolute;
@@ -125,25 +119,31 @@
             z-index: 10;
         }
     </style>
+    <link rel="stylesheet" href="~/css/account.css" asp-append-version="true" />
 </head>
-<body>
-    <!-- Container kính mờ -->
+<body class="account-screen">
     <div class="glass-container">
+        <a asp-controller="Home" asp-action="Index" class="btn-back" title="Về trang chủ">
+            <i class="bi bi-arrow-left"></i>
+        </a>
         <div class="logo-header">
             <img src="~/images/logo.png" alt="MediSlot Logo" class="logo-img" />
             <span class="logo-text">MediSlot</span>
         </div>
 
         <h2>Đăng nhập</h2>
-        <!-- Form đăng nhập -->
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger">@TempData["Error"]</div>
+        }
         <form asp-action="Login" method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
-            <!-- Email input -->
+
             <div class="form-group mb-4">
-                <input asp-for="Email" class="form-control" placeholder="Email, điện thoại hoặc Skype" />
+                <input asp-for="Email" class="form-control" placeholder="Email" />
                 <span asp-validation-for="Email" class="text-danger small"></span>
             </div>
-            <!-- Password input với icon con mắt -->
+
             <div class="form-group mb-3">
                 <div class="password-wrapper">
                     <input asp-for="Password" type="password" id="passwordInput" class="form-control" placeholder="Mật khẩu" />
@@ -151,20 +151,20 @@
                 </div>
                 <span asp-validation-for="Password" class="text-danger small"></span>
             </div>
-            <!-- Checkbox "Ghi nhớ tôi" -->
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div class="form-check">
                     <input asp-for="RememberMe" class="form-check-input" />
                     <label asp-for="RememberMe" class="form-check-label">Ghi nhớ tôi</label>
                 </div>
+                <a asp-action="ForgotPassword" class="text-decoration-none" style="font-size: 0.95rem; color: #0067b8;">Quên mật khẩu?</a>
             </div>
-            <!-- Nút đăng nhập -->
+
             <button type="submit" class="btn btn-primary">Đăng nhập</button>
         </form>
 
         <div class="divider">hoặc</div>
 
-        <!-- Phần Google Login giữ nguyên -->
         <form asp-action="ExternalLogin" asp-route-returnUrl="@(ViewData["ReturnUrl"])" method="post">
             <button type="submit" class="btn-google" name="provider" value="Google">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px" style="margin-right: 8px;">
@@ -182,7 +182,6 @@
         </div>
     </div>
 
-    <!-- Script xử lý ẩn hiện mật khẩu -->
     <script>
         function togglePassword(inputId, icon) {
             const input = document.getElementById(inputId);
@@ -197,5 +196,7 @@
             }
         }
     </script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
 </body>
 </html>

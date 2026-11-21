@@ -5,3 +5,15 @@
 *.user
 bin/
 obj/
+@"
+.vs/
+.vscode/
+*.user
+*.suo
+*.dbmdl
+*.jfm
+*.pfx
+*.publishsettings
+appsettings.Development.json
+appsettings.Secret.json
+"@ | Out-File -FilePath .gitignore -Encoding utf8

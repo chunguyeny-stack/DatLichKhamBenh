@@ -3,6 +3,11 @@
     Layout = "~/Areas/Doctor/Views/Shared/_LayoutDoctor.cshtml";
 }
 
+<!-- Thêm lời chào -->
+<div style="margin-bottom: 20px;">
+    <h2 style="font-weight: 600; color: var(--primary-dark);">Xin chào, @(ViewBag.FullName ?? "Bác sĩ")!</h2>
+</div>
+
 <div class="card">
     <div class="card-title">
         <i class="fas fa-clock"></i> Danh sách bệnh nhân chờ khám
