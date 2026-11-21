@@ -1,28 +1,25 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DatLichKhamBenh.Models.Entities
 {
-    [Table("chuyen_khoa")]
-    public class ChuyenKhoa
+    public class Specialty
     {
         [Key]
-        [Column("id")]
         public int Id { get; set; }
 
-        [Column("ten_chuyen_khoa")]
-        public string TenChuyenKhoa { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Tên chuyên khoa không được để trống")]
+        [StringLength(100)]
+        [Display(Name = "Tên chuyên khoa")]
+        public string Name { get; set; } = null!; // Ví dụ: "Tim mạch", "Nhi khoa"
 
-        [Column("mo_ta")]
-        public string? MoTa { get; set; }
+        [StringLength(500)]
+        [Display(Name = "Mô tả")]
+        public string? Description { get; set; }
 
-        [Column("trang_thai")]
-        public string TrangThai { get; set; } = "active";
+        [Display(Name = "Đang hoạt động")]
+        public bool IsActive { get; set; } = true;
 
-        [Column("ly_do_xoa")]
-        public string? LyDoXoa { get; set; }
-
-        public virtual ICollection<BacSi> BacSis { get; set; } = new List<BacSi>();
+        // Navigation property: Một chuyên khoa có nhiều bác sĩ
+        public ICollection<Doctor> Doctors { get; set; } = new List<Doctor>();
     }
 }

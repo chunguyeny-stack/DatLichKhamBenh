@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
 
 namespace DatLichKhamBenh.Models.Entities
 {
@@ -22,8 +19,7 @@ namespace DatLichKhamBenh.Models.Entities
         [DataType(DataType.Date)]
         public DateTime? DateOfBirth { get; set; }
 
-        // Cờ bắt buộc đổi mật khẩu ở lần đăng nhập đầu tiên
-        // (Dùng khi Admin tạo tài khoản BS/LT với mật khẩu mặc định)
+        // Cờ bắt buộc đổi mật khẩu trước khi sử dụng tài khoản.
         [Display(Name = "Phải đổi mật khẩu")]
         public bool MustChangePassword { get; set; } = false;
 
@@ -33,13 +29,10 @@ namespace DatLichKhamBenh.Models.Entities
         public string? LockoutReason { get; set; }
 
         // Navigation property (tùy chọn - nếu muốn truy cập ngược)
-        public BacSi? DoctorProfile { get; set; }
-        public BenhNhan? PatientProfile { get; set; }
+        public Doctor? DoctorProfile { get; set; }
+        public Patient? PatientProfile { get; set; }
 
         // Helper: Họ tên đầy đủ
         public string FullName => $"{MiddleName} {FirstName}".Trim();
-
-        [NotMapped]
-        public virtual ICollection<BacSi> BacSis { get; set; } = new List<BacSi>();
     }
 }

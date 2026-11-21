@@ -23,4 +23,9 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Migrations\20261120130835_AddIdentityTables.cs" />
+    <Compile Remove="Migrations\20261120130835_AddIdentityTables.Designer.cs" />
+  </ItemGroup>
+
 </Project>

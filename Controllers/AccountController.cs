@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using DatLichKhamBenh.Data;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Models.ViewModels;
 using DatLichKhamBenh.Services.Interfaces;
@@ -6,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 [Authorize]
@@ -13,6 +16,7 @@ public class AccountController : Controller
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly ApplicationDbContext _context;
     private readonly IAuthService _authService;
     private readonly ILogger<AccountController> _logger;
     private readonly IConfiguration _configuration;
@@ -20,12 +24,14 @@ public class AccountController : Controller
     public AccountController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
+        ApplicationDbContext context,
         IAuthService authService,
         ILogger<AccountController> logger,
         IConfiguration configuration)
     {
         _userManager = userManager;
         _signInManager = signInManager;
+        _context = context;
         _authService = authService;
         _logger = logger;
         _configuration = configuration;
@@ -295,8 +301,16 @@ public class AccountController : Controller
             return View();
         }
 
-        user.MustChangePassword = false;
-        await _userManager.UpdateAsync(user);
+        user.MustChangePassword = true;
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            foreach (var error in updateResult.Errors)
+                ModelState.AddModelError(string.Empty, error.Description);
+            ViewBag.UserId = userId;
+            ViewBag.Token = token;
+            return View();
+        }
         await _userManager.UpdateSecurityStampAsync(user);
         TempData["Success"] = "Đặt lại mật khẩu thành công.";
         return RedirectToAction(nameof(Login));
@@ -316,6 +330,12 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ExternalLogin(string provider, string? returnUrl = null)
     {
+        if (!string.Equals(provider, "Google", StringComparison.Ordinal))
+        {
+            TempData["Error"] = "Nhà cung cấp đăng nhập không hợp lệ.";
+            return RedirectToAction(nameof(Login));
+        }
+
         if (string.IsNullOrWhiteSpace(_configuration["Authentication:Google:ClientId"])
             || string.IsNullOrWhiteSpace(_configuration["Authentication:Google:ClientSecret"]))
         {
@@ -364,28 +384,96 @@ public class AccountController : Controller
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
+                await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
                 TempData["Error"] = "Không nhận được thông tin đăng nhập từ Google. Vui lòng thử lại.";
                 return RedirectToAction(nameof(Login));
             }
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
-            var result = await _signInManager.ExternalLoginSignInAsync(
-                info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
-
-            if (result.Succeeded)
+            var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+            var emailVerified = info.Principal.FindFirstValue("email_verified");
+            if (string.IsNullOrWhiteSpace(email)
+                || !bool.TryParse(emailVerified, out var isEmailVerified)
+                || !isEmailVerified)
             {
-                var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-                if (user?.MustChangePassword == true)
-                    return RedirectToAction(nameof(ChangePassword));
-
-                if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
-                    return LocalRedirect(returnUrl);
-                return await RedirectToRoleDashboardAsync(user);
+                TempData["Error"] = "Google chưa xác minh địa chỉ email. Hãy dùng tài khoản Google có email đã xác minh.";
+                return RedirectToAction(nameof(Login));
             }
 
-            TempData["Error"] = result.IsLockedOut
-                ? "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên."
-                : "Tài khoản Google chưa được liên kết với tài khoản MediSlot.";
-            return RedirectToAction(nameof(Login));
+            var user = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+            if (user != null)
+            {
+                if (!user.EmailConfirmed
+                    && string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+                {
+                    user.EmailConfirmed = true;
+                    var updateResult = await _userManager.UpdateAsync(user);
+                    if (!updateResult.Succeeded)
+                        return ExternalLoginFailure("Không thể xác minh email cho tài khoản hiện có.", updateResult.Errors);
+                }
+
+                return await SignInExternalUserAsync(user, info.LoginProvider, info.ProviderKey, returnUrl);
+            }
+
+            user = await _userManager.FindByEmailAsync(email);
+            var isNewUser = user == null;
+            if (user != null && await _userManager.IsLockedOutAsync(user))
+            {
+                TempData["Error"] = "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.";
+                return RedirectToAction(nameof(Login));
+            }
+
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            if (user == null)
+            {
+                var googleName = info.Principal.FindFirstValue(ClaimTypes.Name);
+                user = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email,
+                    EmailConfirmed = true,
+                    FirstName = info.Principal.FindFirstValue(ClaimTypes.GivenName)
+                        ?? googleName
+                        ?? email,
+                    MiddleName = info.Principal.FindFirstValue(ClaimTypes.Surname),
+                    LockoutEnabled = true
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                    return ExternalLoginFailure("Không thể tạo tài khoản MediSlot từ Google.", createResult.Errors);
+
+                var roleResult = await _userManager.AddToRoleAsync(user, "Patient");
+                if (!roleResult.Succeeded)
+                    return ExternalLoginFailure("Không thể gán vai trò Bệnh nhân cho tài khoản Google.", roleResult.Errors);
+
+                _context.Patients.Add(new Patient
+                {
+                    UserId = user.Id,
+                    CreatedAt = DateTime.Now,
+                    IsActive = true
+                });
+                await _context.SaveChangesAsync();
+            }
+            else if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                    return ExternalLoginFailure("Không thể xác minh email cho tài khoản hiện có.", updateResult.Errors);
+            }
+
+            var addLoginResult = await _userManager.AddLoginAsync(user, info);
+            if (!addLoginResult.Succeeded)
+                return ExternalLoginFailure("Không thể liên kết tài khoản Google với MediSlot.", addLoginResult.Errors);
+
+            await transaction.CommitAsync();
+
+            _logger.LogInformation(
+                "Tài khoản {UserId} đã được {Action} bằng Google.",
+                user.Id,
+                isNewUser ? "tạo mới" : "liên kết");
+            return await SignInExternalUserAsync(user, info.LoginProvider, info.ProviderKey, returnUrl);
         }
         catch (Exception ex)
         {
@@ -393,6 +481,59 @@ public class AccountController : Controller
             TempData["Error"] = "Không thể hoàn tất đăng nhập bằng Google. Vui lòng thử lại sau.";
             return RedirectToAction(nameof(Login));
         }
+    }
+
+    private async Task<IActionResult> SignInExternalUserAsync(
+        ApplicationUser user,
+        string loginProvider,
+        string providerKey,
+        string? returnUrl)
+    {
+        if (await _userManager.IsLockedOutAsync(user))
+        {
+            TempData["Error"] = "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        var result = await _signInManager.ExternalLoginSignInAsync(
+            loginProvider,
+            providerKey,
+            isPersistent: false,
+            bypassTwoFactor: false);
+        if (result.IsLockedOut)
+        {
+            TempData["Error"] = "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.";
+            return RedirectToAction(nameof(Login));
+        }
+        if (result.RequiresTwoFactor)
+        {
+            await HttpContext.SignOutAsync(IdentityConstants.TwoFactorUserIdScheme);
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            TempData["Error"] = "Tài khoản bật xác thực hai bước nhưng ứng dụng chưa hỗ trợ bước xác minh này.";
+            return RedirectToAction(nameof(Login));
+        }
+        if (!result.Succeeded)
+        {
+            TempData["Error"] = "Tài khoản hiện không được phép đăng nhập.";
+            return RedirectToAction(nameof(Login));
+        }
+
+        if (user.MustChangePassword)
+            return RedirectToAction(nameof(ChangePassword));
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return LocalRedirect(returnUrl);
+        return await RedirectToRoleDashboardAsync(user);
+    }
+
+    private IActionResult ExternalLoginFailure(
+        string message,
+        IEnumerable<IdentityError> errors)
+    {
+        _logger.LogError(
+            "Lỗi tạo/liên kết tài khoản Google: {Errors}",
+            string.Join("; ", errors.Select(error => error.Description)));
+        TempData["Error"] = message;
+        return RedirectToAction(nameof(Login));
     }
 
     private async Task<IActionResult> RedirectToRoleDashboardAsync(ApplicationUser? user)

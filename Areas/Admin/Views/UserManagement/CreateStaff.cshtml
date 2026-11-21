@@ -1,9 +1,8 @@
 @model DatLichKhamBenh.Models.ViewModels.CreateStaffViewModel
 @{
     ViewData["Title"] = "Tạo tài khoản nhân sự";
-    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
-    // Lấy danh sách chuyên khoa từ ViewBag do Controller truyền sang
-    var specialties = ViewBag.Specialties as List<DatLichKhamBenh.Models.Entities.ChuyenKhoa>;
+    Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+    var specialties = ViewBag.Specialties as List<DatLichKhamBenh.Models.Entities.Specialty>;
 }
 
 <!-- ... (Giữ nguyên phần <style> như cũ) ... -->
@@ -13,7 +12,7 @@
         <a asp-action="Index" class="btn-back-link"><i class="bi bi-arrow-left"></i> Quay lại danh sách</a>
 
         <h2 class="form-title">Thêm Nhân Sự Mới</h2>
-        <p class="helper-text">Tạo tài khoản cho Bác sĩ hoặc Lễ tân. Mật khẩu mặc định sẽ được gửi và người dùng bắt buộc phải đổi ở lần đăng nhập đầu tiên.</p>
+        <p class="helper-text">Tạo tài khoản Bác sĩ, Lễ tân hoặc Admin. Mật khẩu khởi tạo lấy từ cấu hình Seed:StaffPassword và người dùng bắt buộc phải đổi ở lần đăng nhập đầu tiên.</p>
 
         <form asp-action="CreateStaff" method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
@@ -43,6 +42,7 @@
                     <option value="">-- Chọn vai trò --</option>
                     <option value="Doctor">Bác sĩ (Doctor)</option>
                     <option value="Receptionist">Lễ tân (Receptionist)</option>
+                    <option value="Admin">Quản trị viên (Admin)</option>
                 </select>
                 <span asp-validation-for="Role" class="text-danger small"></span>
             </div>
@@ -56,7 +56,7 @@
                     {
                         foreach (var item in specialties)
                         {
-                            <option value="@item.Id">@item.TenChuyenKhoa</option>
+                            <option value="@item.Id">@item.Name</option>
                         }
                     }
                 </select>

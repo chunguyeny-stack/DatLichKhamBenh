@@ -1,11 +1,4 @@
-<<<<<<< HEAD
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using DatLichKhamBenh.Data.Context;
-using DatLichKhamBenh.Models.Entities;
-=======
 using DatLichKhamBenh.Data;
->>>>>>> 5b38487 (L5_B5: Fix: Luồng MCV và đồng nhất giao diện)
 using DatLichKhamBenh.Data.Seed;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Filters;
@@ -93,6 +86,7 @@ if (!string.IsNullOrWhiteSpace(googleClientId) &&
         options.ClientSecret = googleClientSecret;
         options.Scope.Add("email");
         options.Scope.Add("profile");
+        options.ClaimActions.MapJsonKey("email_verified", "verified_email");
     });
 }
 else
