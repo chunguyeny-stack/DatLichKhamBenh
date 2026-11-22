@@ -1,0 +1,479 @@
+﻿@model DatLichKhamBenh.Models.ViewModels.DatLichViewModel
+@using System.Globalization
+@using DatLichKhamBenh.Models.Enums
+@{
+    ViewData["Title"] = "Đặt lịch khám";
+    var minDate = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    var maxDate = DateTime.Today.AddDays(14).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --pink-main: #DF6688;
+        --pink-dark: #C65172;
+        --pink-soft: #FCEEF2;
+        --pink-banner: #FDF2F5;
+        --ink-dark: #1E2432;
+        --ink-muted: #5A6275;
+        --page-bg: #FAFAFC;
+    }
+
+    .ms-page-wrap,
+    .ms-page-wrap * {
+        box-sizing: border-box;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        font-family: 'Be Vietnam Pro', sans-serif;
+    }
+
+    .ms-page-wrap {
+        background-color: var(--page-bg);
+        color: var(--ink-dark);
+        min-height: 100vh;
+    }
+
+    .ms-topbar {
+        background-color: #FFFFFF;
+        border: none;
+        width: 100%;
+    }
+
+    .ms-topbar-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .ms-topbar-left {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 36px;
+    }
+
+    .ms-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        font-family: 'Nunito', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
+        color: #4A4A4A;
+        border: none;
+    }
+
+    .ms-nav {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 24px;
+    }
+
+    .ms-nav a {
+        text-decoration: none;
+        font-size: 14.5px;
+        font-weight: 600;
+        color: var(--ink-dark);
+        border: none;
+    }
+
+    .ms-nav a.is-active,
+    .ms-nav a:hover {
+        color: var(--pink-main);
+    }
+
+    .ms-topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .ms-user-email {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ink-dark);
+    }
+
+    .ms-btn-pink,
+    .ms-btn-register {
+        background-color: var(--pink-main);
+        color: #FFFFFF;
+        border: none;
+        padding: 8px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ms-btn-pink:hover,
+    .ms-btn-register:hover {
+        background-color: var(--pink-dark);
+        color: #FFFFFF;
+    }
+
+    .ms-btn-login {
+        background-color: #FFFFFF;
+        color: var(--pink-main);
+        border: none;
+        padding: 8px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ms-btn-login:hover {
+        background-color: var(--pink-soft);
+        color: var(--pink-dark);
+    }
+
+    .book-wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 28px 20px 60px;
+    }
+
+    .book-banner {
+        background-color: var(--pink-banner);
+        border: none;
+        padding: 24px 28px;
+        margin-bottom: 20px;
+    }
+
+    .book-title {
+        font-family: 'Nunito', sans-serif;
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--ink-dark);
+        margin: 0 0 6px 0;
+    }
+
+    .book-subtitle {
+        font-size: 14px;
+        color: var(--ink-muted);
+        margin: 0;
+    }
+
+    .book-card {
+        background-color: #FFFFFF;
+        border: none;
+        padding: 28px;
+    }
+
+    .book-card .form-label {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--ink-dark);
+        margin-bottom: 6px;
+    }
+
+    .book-card .form-control,
+    .book-card .form-select {
+        border: 1px solid #E6E8EF;
+        padding: 10px 12px;
+        font-size: 14px;
+        color: var(--ink-dark);
+        background-color: #FFFFFF;
+    }
+
+    .book-card .form-control:focus,
+    .book-card .form-select:focus {
+        border-color: var(--pink-main);
+        outline: none;
+    }
+
+    .fee-box {
+        background-color: var(--pink-banner);
+        padding: 20px;
+        height: 100%;
+    }
+
+    .fee-box-title {
+        font-family: 'Nunito', sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--ink-dark);
+        margin-bottom: 14px;
+    }
+
+    .fee-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        margin-bottom: 10px;
+        color: var(--ink-muted);
+    }
+
+    .fee-total {
+        display: flex;
+        justify-content: space-between;
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--pink-main);
+        padding-top: 12px;
+        margin-top: 12px;
+        border-top: 1px solid #F0D5DF;
+    }
+
+    .btn-submit-pink {
+        background-color: var(--pink-main);
+        color: #FFFFFF;
+        border: none;
+        padding: 11px 24px;
+        font-size: 14.5px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-submit-pink:hover {
+        background-color: var(--pink-dark);
+        color: #FFFFFF;
+    }
+
+    .btn-back-soft {
+        background-color: var(--pink-soft);
+        color: var(--ink-dark);
+        border: none;
+        padding: 11px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-back-soft:hover {
+        background-color: var(--pink-banner);
+        color: var(--pink-main);
+    }
+</style>
+
+<div class="ms-page-wrap">
+    <header class="ms-topbar">
+        <div class="ms-topbar-inner">
+            <div class="ms-topbar-left">
+                <a asp-controller="Home" asp-action="Index" class="ms-brand" title="Về trang chủ">
+                    <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M30 30H16C11.5817 30 8 26.4183 8 22C8 18.2 10.65 15.02 14.2 14.2C15.02 10.65 18.2 8 22 8C26.4183 8 30 11.5817 30 16V30Z" fill="#D59ECA"/>
+                        <path d="M34 30V16C34 11.5817 37.5817 8 42 8C45.8 8 48.98 10.65 49.8 14.2C53.35 15.02 56 18.2 56 22C56 26.4183 52.4183 30 48 30H34Z" fill="#77B800"/>
+                        <path d="M30 34V48C30 52.4183 26.4183 56 22 56C18.2 56 15.02 53.35 14.2 49.8C10.65 48.98 8 45.8 8 42C8 37.5817 11.5817 34 16 34H30Z" fill="#00A6EB"/>
+                        <path d="M34 34H48C52.4183 34 56 37.5817 56 42C56 45.8 53.35 48.98 49.8 49.8C48.98 53.35 45.8 56 42 56C37.5817 56 34 52.4183 34 48V34Z" fill="#F9EBF2" stroke="#EBC1D3" stroke-width="1.5"/>
+                    </svg>
+                    <span>MediSlot</span>
+                </a>
+
+                <nav class="ms-nav">
+                    <a asp-controller="Home" asp-action="Index">Trang chủ</a>
+                    <a asp-controller="Doctor" asp-action="Index">Tìm kiếm BS</a>
+                    <a asp-controller="Booking" asp-action="Create" class="is-active">Đặt lịch khám</a>
+                    <a asp-controller="Patient" asp-action="Appointments">Lịch sử khám</a>
+                </nav>
+            </div>
+
+            <div class="ms-topbar-right">
+                @if (User.Identity != null && User.Identity.IsAuthenticated)
+                {
+                    <a asp-controller="Account" asp-action="Profile" class="ms-user-email" style="text-decoration: none;">@User.Identity.Name</a>
+                    <form asp-controller="Account" asp-action="Logout" method="post" style="margin: 0;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="ms-btn-pink">Đăng xuất</button>
+                    </form>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="ms-btn-login">Đăng nhập</a>
+                    <a asp-controller="Account" asp-action="Register" class="ms-btn-register">Đăng ký</a>
+                }
+            </div>
+        </div>
+    </header>
+
+    <div class="book-wrap">
+        <div class="book-banner">
+            <h2 class="book-title">Đặt lịch khám bệnh</h2>
+            <p class="book-subtitle">Đặt lịch trực tuyến trong vòng 14 ngày tới • Ca tối phụ thu 10% phí khám</p>
+        </div>
+
+        <div class="book-card">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger border-0"></div>
+
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="ChuyenKhoaId" class="form-label">Chuyên khoa</label>
+                                <select asp-for="ChuyenKhoaId" id="specialtySelect" class="form-select">
+                                    <option value="">-- Tất cả chuyên khoa --</option>
+                                    @foreach (var sp in Model.ChuyenKhoas)
+                                    {
+                                        <option value="@sp.Id">@sp.TenChuyenKhoa</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="BacSiId" class="form-label">Bác sĩ phụ trách <span class="text-danger">*</span></label>
+                                <select asp-for="BacSiId" id="doctorSelect" class="form-select" required>
+                                    <option value="">-- Chọn bác sĩ --</option>
+                                    @foreach (var doc in Model.BacSis)
+                                    {
+                                        var fullName = !string.IsNullOrWhiteSpace(doc.HoTen)
+                                            ? doc.HoTen
+                                            : (doc.ApplicationUser?.FullName ?? doc.ApplicationUser?.Email ?? $"Bác sĩ #{doc.Id}");
+                                        var label = string.IsNullOrWhiteSpace(doc.HocVi)
+                                            ? fullName
+                                            : $"{doc.HocVi} - {fullName}";
+                                        var khoaName = doc.ChuyenKhoa?.TenChuyenKhoa ?? "";
+                                        var optionText = string.IsNullOrEmpty(khoaName) ? label : $"{label} ({khoaName})";
+                                        <option value="@doc.Id" data-specialty="@doc.ChuyenKhoaId">@optionText</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="BacSiId" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="NgayKham" class="form-label">Ngày khám <span class="text-danger">*</span></label>
+                                <input asp-for="NgayKham" type="date" min="@minDate" max="@maxDate" class="form-control" required/>
+                                <span asp-validation-for="NgayKham" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="CaKham" class="form-label">Ca khám <span class="text-danger">*</span></label>
+                                <select asp-for="CaKham" id="caKhamSelect" asp-items="Html.GetEnumSelectList<CaKham>()" class="form-select"></select>
+                                <span asp-validation-for="CaKham" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label asp-for="KhungGio" class="form-label">Khung giờ <span class="text-danger">*</span></label>
+                                <select asp-for="KhungGio" id="timeSlotSelect" class="form-select" required>
+                                    <option value="08:00 - 09:00">08:00 - 09:00 (Sáng)</option>
+                                    <option value="09:00 - 10:00">09:00 - 10:00 (Sáng)</option>
+                                    <option value="10:00 - 11:00">10:00 - 11:00 (Sáng)</option>
+                                    <option value="13:30 - 14:30">13:30 - 14:30 (Chiều)</option>
+                                    <option value="14:30 - 15:30">14:30 - 15:30 (Chiều)</option>
+                                    <option value="15:30 - 16:30">15:30 - 16:30 (Chiều)</option>
+                                    <option value="18:00 - 19:00">18:00 - 19:00 (Tối +10%)</option>
+                                    <option value="19:00 - 20:00">19:00 - 20:00 (Tối +10%)</option>
+                                </select>
+                                <span asp-validation-for="KhungGio" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="GhiChu" class="form-label">Triệu chứng / Ghi chú cho bác sĩ <span class="text-danger">*</span></label>
+                                <textarea asp-for="GhiChu" rows="4" class="form-control" placeholder="Mô tả triệu chứng hiện tại, thời gian khởi phát hoặc tiền sử bệnh lý..."></textarea>
+                                <span asp-validation-for="GhiChu" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2 flex-wrap">
+                            <button type="submit" class="btn-submit-pink">Xác nhận đặt lịch</button>
+                            <a asp-controller="Doctor" asp-action="Index" class="btn-back-soft">Chọn bác sĩ khác</a>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="fee-box">
+                            <div class="fee-box-title">Chi tiết chi phí dự kiến</div>
+                            <div class="fee-row">
+                                <span>Phí khám cơ bản:</span>
+                                <strong id="baseFeeText">200,000 đ</strong>
+                            </div>
+                            <div class="fee-row">
+                                <span>Phụ thu ca tối (10%):</span>
+                                <strong id="surchargeText">0 đ</strong>
+                            </div>
+                            <div class="fee-total">
+                                <span>Tổng tạm tính:</span>
+                                <span id="totalFeeText">200,000 đ</span>
+                            </div>
+                            <div class="mt-3 small" style="color: var(--ink-muted); line-height: 1.6;">
+                                • Lịch hẹn chỉ được đặt trước tối đa <strong>14 ngày</strong>.<br/>
+                                • Bạn có thể hủy hoặc đổi lịch trước giờ khám tối thiểu <strong>24 giờ</strong>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const baseFee = 200000;
+        const specialtySelect = document.getElementById('specialtySelect');
+        const doctorSelect = document.getElementById('doctorSelect');
+        const caKhamSelect = document.getElementById('caKhamSelect');
+        const timeSlotSelect = document.getElementById('timeSlotSelect');
+        const surchargeText = document.getElementById('surchargeText');
+        const totalFeeText = document.getElementById('totalFeeText');
+
+        const slotsByShift = {
+            '0': ['08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00'],
+            '1': ['13:30 - 14:30', '14:30 - 15:30', '15:30 - 16:30'],
+            '2': ['18:00 - 19:00', '19:00 - 20:00']
+        };
+
+        function formatVnd(amount) {
+            return amount.toLocaleString('vi-VN') + ' đ';
+        }
+
+        function updateFeeAndSlots() {
+            const shiftVal = caKhamSelect.value;
+            const isEvening = shiftVal === '2' || caKhamSelect.options[caKhamSelect.selectedIndex]?.text.toLowerCase().includes('tối');
+            const surcharge = isEvening ? baseFee * 0.1 : 0;
+            surchargeText.textContent = formatVnd(surcharge);
+            totalFeeText.textContent = formatVnd(baseFee + surcharge);
+
+            const allowedSlots = slotsByShift[shiftVal];
+            if (allowedSlots) {
+                const currentVal = timeSlotSelect.value;
+                timeSlotSelect.innerHTML = '';
+                allowedSlots.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    opt.textContent = s;
+                    if (s === currentVal) opt.selected = true;
+                    timeSlotSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function filterDoctorsBySpecialty() {
+            const spId = specialtySelect.value;
+            Array.from(doctorSelect.options).forEach(opt => {
+                if (!opt.value) return;
+                const docSp = opt.getAttribute('data-specialty');
+                opt.hidden = spId !== '' && docSp !== spId;
+            });
+            const selectedOpt = doctorSelect.options[doctorSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.hidden) {
+                doctorSelect.value = '';
+            }
+        }
+
+
+        specialtySelect?.addEventListener('change', filterDoctorsBySpecialty);
+        caKhamSelect?.addEventListener('change', updateFeeAndSlots);
+
+        filterDoctorsBySpecialty();
+        updateFeeAndSlots();
+    })();
+</script>
