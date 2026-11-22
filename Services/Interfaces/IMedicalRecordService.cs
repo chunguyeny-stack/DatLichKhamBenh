@@ -1,5 +1,6 @@
-using MediSlot.Models.ViewModels;
-namespace MediSlot.Services.Interfaces
+using DatLichKhamBenh.Models.ViewModels;
+
+namespace DatLichKhamBenh.Services.Interfaces
 {
     public interface IMedicalRecordService
     {

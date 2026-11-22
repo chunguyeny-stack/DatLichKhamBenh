@@ -1,23 +1,12 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Models.ViewModels;
-<<<<<<< HEAD
 using Microsoft.EntityFrameworkCore;
-using DatLichKhamBenh.Data;
-<<<<<<< HEAD
-=======
->>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
-=======
+using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Services.Interfaces;
->>>>>>> 5b38487 (L5_B5: Fix: Luồng MCV và đồng nhất giao diện)
+using System.Text.Encodings.Web;
 
 namespace DatLichKhamBenh.Areas.Admin.Controllers
 {
@@ -72,13 +61,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
         [HttpGet]
         public async Task<IActionResult> CreateStaff()
         {
-<<<<<<< HEAD
             ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
-=======
-            ViewBag.Specialties = await _context.ChuyenKhoas
-                .Where(s => s.TrangThai == "active")
-                .ToListAsync();
->>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
             return View();
         }
 
@@ -88,47 +71,39 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
         {
             if (!ModelState.IsValid)
             {
-                ViewBag.Specialties = await _context.ChuyenKhoas
-                    .Where(s => s.TrangThai == "active")
-                    .ToListAsync();
+                ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
                 return View(model);
             }
 
-            if (model.Role != "Doctor" && model.Role != "Receptionist")
+            if (!CreateStaffViewModel.AllowedRoles.Contains(model.Role, StringComparer.Ordinal))
             {
-<<<<<<< HEAD
                 ModelState.AddModelError("Role", "Vai trò không hợp lệ.");
                 ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
-=======
-                ModelState.AddModelError("Role", "Vai trò không hợp lệ. Chỉ chấp nhận Doctor hoặc Receptionist.");
-                ViewBag.Specialties = await _context.ChuyenKhoas
-                    .Where(s => s.TrangThai == "active")
-                    .ToListAsync();
                 return View(model);
             }
 
-            if (model.Role == "Doctor" && (!model.SpecialtyId.HasValue || model.SpecialtyId.Value <= 0))
+            if (model.Role == "Doctor"
+                && !await _context.Specialties.AnyAsync(s => s.Id == model.SpecialtyId && s.IsActive))
             {
-                ModelState.AddModelError("SpecialtyId", "Vui lòng chọn chuyên khoa cho bác sĩ.");
-                ViewBag.Specialties = await _context.ChuyenKhoas
-                    .Where(s => s.TrangThai == "active")
-                    .ToListAsync();
->>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
+                ModelState.AddModelError("SpecialtyId", "Vui lòng chọn chuyên khoa đang hoạt động.");
+                ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
+                return View(model);
+            }
+
+            var initialPassword = _configuration["Seed:StaffPassword"];
+            if (string.IsNullOrWhiteSpace(initialPassword))
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Chưa cấu hình Seed:StaffPassword. Hãy đặt mật khẩu ban đầu qua User Secrets hoặc biến môi trường.");
+                ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
                 return View(model);
             }
 
             var existingUser = await _userManager.FindByEmailAsync(model.Email);
             if (existingUser != null)
             {
-<<<<<<< HEAD
                 ModelState.AddModelError("Email", "Email này đã được sử dụng.");
                 ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
-=======
-                ModelState.AddModelError("Email", "Email này đã được sử dụng trong hệ thống.");
-                ViewBag.Specialties = await _context.ChuyenKhoas
-                    .Where(s => s.TrangThai == "active")
-                    .ToListAsync();
->>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
                 return View(model);
             }
 
@@ -143,56 +118,61 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                 LockoutEnabled = true
             };
 
-            var defaultPassword = GenerateTemporaryPassword();
-            var result = await _userManager.CreateAsync(user, defaultPassword);
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            var result = await _userManager.CreateAsync(user, initialPassword);
 
-            if (result.Succeeded)
+            if (!result.Succeeded)
             {
-                await _userManager.AddToRoleAsync(user, model.Role);
-<<<<<<< HEAD
-=======
-                _logger.LogInformation("Admin đã tạo tài khoản {Role}: {Email}", model.Role, model.Email);
->>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
-
-                if (model.Role == "Doctor")
-                {
-<<<<<<< HEAD
-                    _context.Doctors.Add(new DatLichKhamBenh.Models.Entities.Doctor
-                    {
-                        UserId = user.Id,
-                        SpecialtyId = model.SpecialtyId ?? 0,
-                        IsActive = true,
-                        CreatedAt = DateTime.Now
-                    });
-=======
-                    var doctorProfile = new BacSi
-                    {
-                        ApplicationUserId = user.Id,
-                        ChuyenKhoaId = model.SpecialtyId!.Value,
-                        HoTen = $"{model.MiddleName} {model.FirstName}".Trim(),
-                        Email = model.Email
-                    };
-                    _context.BacSis.Add(doctorProfile);
->>>>>>> 79b2187 (Cập nhật tiếp nhận , điều phối lễ tânL)
-                    await _context.SaveChangesAsync();
-                }
-
-                await _emailService.SendAsync(
-                    user.Email!,
-                    "Tài khoản nhân sự MediSlot",
-                    $"<p>Tài khoản của bạn đã được tạo.</p><p>Email: <strong>{user.Email}</strong></p><p>Mật khẩu tạm thời: <strong>{defaultPassword}</strong></p><p>Bạn phải đổi mật khẩu ở lần đăng nhập đầu tiên.</p>");
-
-                TempData["SuccessMessage"] = $"Đã tạo tài khoản {model.Role}. Thông tin đăng nhập đã được gửi đến email.";
-                return RedirectToAction(nameof(Index));
+                await transaction.RollbackAsync();
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError(string.Empty, error.Description);
+                ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
+                return View(model);
             }
 
-            foreach (var error in result.Errors)
-                ModelState.AddModelError(string.Empty, error.Description);
+            var roleResult = await _userManager.AddToRoleAsync(user, model.Role);
+            if (!roleResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                foreach (var error in roleResult.Errors)
+                    ModelState.AddModelError(string.Empty, error.Description);
+                ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
+                return View(model);
+            }
 
-            ViewBag.Specialties = await _context.ChuyenKhoas
-                .Where(s => s.TrangThai == "active")
-                .ToListAsync();
-            return View(model);
+            if (model.Role == "Doctor")
+            {
+                _context.Doctors.Add(new DatLichKhamBenh.Models.Entities.Doctor
+                {
+                    UserId = user.Id,
+                    SpecialtyId = model.SpecialtyId!.Value,
+                    IsActive = true,
+                    CreatedAt = DateTime.Now
+                });
+                await _context.SaveChangesAsync();
+            }
+
+            await transaction.CommitAsync();
+
+            var encodedEmail = HtmlEncoder.Default.Encode(user.Email!);
+            var encodedPassword = HtmlEncoder.Default.Encode(initialPassword);
+            var emailSent = await _emailService.SendAsync(
+                user.Email!,
+                "Tài khoản nhân sự MediSlot",
+                $"<p>Tài khoản của bạn đã được tạo.</p><p>Email: <strong>{encodedEmail}</strong></p><p>Mật khẩu khởi tạo: <strong>{encodedPassword}</strong></p><p>Bạn phải đổi mật khẩu ở lần đăng nhập đầu tiên.</p>");
+
+            await _authService.LogActionAsync(
+                _userManager.GetUserId(User)!,
+                "CreateStaff",
+                user.Id,
+                $"Tạo tài khoản vai trò {model.Role}");
+
+            if (emailSent)
+                TempData["SuccessMessage"] = $"Đã tạo tài khoản {model.Role} và gửi email hướng dẫn.";
+            else
+                TempData["WarningMessage"] = $"Đã tạo tài khoản {model.Role}, nhưng gửi email thất bại. Hãy thông báo mật khẩu khởi tạo qua kênh bảo mật.";
+
+            return RedirectToAction(nameof(Index));
         }
 
         // 3. KHÓA TÀI KHOẢN

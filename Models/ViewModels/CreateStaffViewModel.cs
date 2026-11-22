@@ -6,7 +6,7 @@ namespace DatLichKhamBenh.Models.ViewModels
 {
     public class CreateStaffViewModel : IValidatableObject
     {
-        public static readonly string[] AllowedRoles = { "Doctor", "Receptionist" };
+        public static readonly string[] AllowedRoles = { "Doctor", "Receptionist", "Admin" };
 
         [Required(ErrorMessage = "Vui lòng nhập họ đệm")]
         [StringLength(50, ErrorMessage = "Họ đệm không được vượt quá 50 ký tự")]
@@ -36,7 +36,7 @@ namespace DatLichKhamBenh.Models.ViewModels
             if (!AllowedRoles.Contains(Role))
             {
                 yield return new ValidationResult(
-                    "Vai trò được chọn không hợp lệ. Chỉ chấp nhận Bác sĩ hoặc Lễ tân.",
+                    "Vai trò được chọn không hợp lệ.",
                     new[] { nameof(Role) });
                 yield break;
             }
@@ -48,11 +48,9 @@ namespace DatLichKhamBenh.Models.ViewModels
                     new[] { nameof(SpecialtyId) });
             }
 
-            if (Role == "Receptionist" && SpecialtyId != null && SpecialtyId > 0)
+            if (Role != "Doctor" && SpecialtyId != null && SpecialtyId > 0)
             {
-                yield return new ValidationResult(
-                    "Lễ tân không cần chọn chuyên khoa.",
-                    new[] { nameof(SpecialtyId) });
+                yield return new ValidationResult("Chỉ Bác sĩ mới được gán chuyên khoa.", new[] { nameof(SpecialtyId) });
             }
         }
     }

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using MediSlot.Models.ViewModels;
-using MediSlot.Services.Interfaces;
+using DatLichKhamBenh.Models.ViewModels;
+using DatLichKhamBenh.Services.Interfaces;
 
 namespace MediSlot.Areas.Doctor.Controllers
 {

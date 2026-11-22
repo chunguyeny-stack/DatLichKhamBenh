@@ -1,4 +1,4 @@
-using DatLichKhamBenh.Data;
+using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Models.ViewModels;
 using DatLichKhamBenh.Services.Interfaces;
@@ -88,7 +88,8 @@ namespace DatLichKhamBenh.Services.Impl
                 PhoneNumber = model.PhoneNumber,
                 DateOfBirth = model.DateOfBirth,
                 EmailConfirmed = false,
-                LockoutEnabled = true
+                LockoutEnabled = true,
+                MustChangePassword = true
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
