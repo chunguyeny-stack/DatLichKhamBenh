@@ -3,7 +3,7 @@
     Layout = null;
     string receptionistName = ViewBag.ReceptionistName ?? "Lễ tân";
     string initials = receptionistName.Trim().Length >= 2 ? receptionistName.Trim().Substring(0, 2).ToUpper() : receptionistName.Trim().ToUpper();
-    string cloverLogoUrl = Url.Content("~/static/images/logo-clover.png");
+    string cloverLogoUrl = Url.Content("~/images/logo-clover.png");
 
     string urlTongQuan = Url.Action("Index", "dashboard_le_tan", new { area = "Receptionist" }) ?? "/Receptionist/dashboard_le_tan";
     string urlQuanLyLichHen = Url.Action("Index", "quan_ly_lich_hen_BN", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_hen_BN";
@@ -29,7 +29,7 @@
     <title>MediSlot - Quản lý Lịch làm việc Bác sĩ</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="~/static/css/LT_BS.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/LT_BS.css" asp-append-version="true">
     <style>
         :root {
             --bg-body: #f4f7fb; --bg-card: #ffffff; --text-color: #1e293b; --text-gray: #64748b;

@@ -1,7 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace DatLichKhamBenh.Data.Seed
 {
@@ -19,11 +28,36 @@ namespace DatLichKhamBenh.Data.Seed
             if (!await context.Specialties.AnyAsync())
             {
                 context.Specialties.AddRange(
-                    new Specialty { Name = "Tim mạch", Description = "Khám và điều trị bệnh tim mạch" },
-                    new Specialty { Name = "Nhi khoa", Description = "Khám và điều trị bệnh cho trẻ em" },
-                    new Specialty { Name = "Da liễu", Description = "Khám và điều trị bệnh về da" },
-                    new Specialty { Name = "Răng Hàm Mặt", Description = "Khám và điều trị răng miệng" },
-                    new Specialty { Name = "Tai Mũi Họng", Description = "Khám và điều trị bệnh tai mũi họng" }
+                    new Specialty
+                    {
+                        Name = "Tim mạch",
+                        Description = "Tầm soát và điều trị bệnh lý mạch máu, cao huyết áp, rối loạn nhịp tim",
+                        CommonSymptoms = "Đau tức ngực, Hồi hộp đánh trống ngực, Tăng huyết áp, Khó thở"
+                    },
+                    new Specialty
+                    {
+                        Name = "Nhi khoa",
+                        Description = "Chăm sóc sức khỏe toàn diện và điều trị bệnh lý ở trẻ nhỏ",
+                        CommonSymptoms = "Sốt cao, Ho khò khè, Biếng ăn, Nôn trớ, Tiêu chảy"
+                    },
+                    new Specialty
+                    {
+                        Name = "Da liễu",
+                        Description = "Tư vấn và điều trị bệnh lý về da, dị ứng, mụn trứng cá, chàm",
+                        CommonSymptoms = "Nổi mẩn đỏ ngứa, Mụn trứng cá, Dị ứng nổi mề đay, Viêm da"
+                    },
+                    new Specialty
+                    {
+                        Name = "Tai Mũi Họng",
+                        Description = "Điều trị viêm xoang, viêm họng, các vấn đề thính lực và thanh quản",
+                        CommonSymptoms = "Đau rát họng, Ù tai, Nghẹt mũi, Khàn tiếng, Viêm xoang"
+                    },
+                    new Specialty
+                    {
+                        Name = "Thần kinh",
+                        Description = "Chẩn đoán và điều trị bệnh lý về nền thần kinh, mất ngủ, đau đầu",
+                        CommonSymptoms = "Đau đầu nửa đầu, Mất ngủ kéo dài, Chóng mặt, Tê bì tay chân"
+                    }
                 );
                 await context.SaveChangesAsync();
             }
@@ -50,11 +84,11 @@ namespace DatLichKhamBenh.Data.Seed
                 {
                     UserName = adminEmail,
                     Email = adminEmail,
+                    FullName = "Quản trị viên hệ thống",
+                    IsActive = true,
                     EmailConfirmed = true,
-                    FirstName = "Quản trị",
-                    MiddleName = "Viên",
                     PhoneNumber = "0123456789",
-                    MustChangePassword = true,     // BẮT BUỘC đổi lần đầu
+                    MustChangePassword = true,
                     LockoutEnabled = true
                 };
 
@@ -106,6 +140,19 @@ namespace DatLichKhamBenh.Data.Seed
                     existing.MustChangePassword = true;
                     await userManager.UpdateAsync(existing);
                 }
+
+                if (!await context.Patients.AnyAsync(p => p.UserId == existing.Id))
+                {
+                    context.Patients.Add(new Patient
+                    {
+                        UserId = existing.Id,
+                        FullName = string.IsNullOrWhiteSpace(existing.FullName) ? "Nguyễn Văn A" : existing.FullName,
+                        PhoneNumber = existing.PhoneNumber ?? "0987654321",
+                        Email = existing.Email,
+                        DateOfBirth = new DateTime(1998, 5, 12)
+                    });
+                    await context.SaveChangesAsync();
+                }
                 return;
             }
 
@@ -114,9 +161,11 @@ namespace DatLichKhamBenh.Data.Seed
                 UserName = email,
                 Email = email,
                 EmailConfirmed = true,
+                FullName = "Nguyễn Văn A",
                 FirstName = "Văn A",
                 MiddleName = "Nguyễn",
                 PhoneNumber = "0987654321",
+                IsActive = true,
                 MustChangePassword = true,
                 LockoutEnabled = true
             };
@@ -136,7 +185,14 @@ namespace DatLichKhamBenh.Data.Seed
             }
 
             await userManager.AddToRoleAsync(user, "Patient");
-            context.Patients.Add(new Patient { UserId = user.Id });
+            context.Patients.Add(new Patient
+            {
+                UserId = user.Id,
+                FullName = user.FullName,
+                PhoneNumber = user.PhoneNumber,
+                Email = user.Email,
+                DateOfBirth = new DateTime(1998, 5, 12)
+            });
             await context.SaveChangesAsync();
         }
 
@@ -159,6 +215,26 @@ namespace DatLichKhamBenh.Data.Seed
                     existing.MustChangePassword = true;
                     await userManager.UpdateAsync(existing);
                 }
+
+                if (!await context.Doctors.AnyAsync(d => d.UserId == existing.Id))
+                {
+                    var defaultSpecialtyId = await context.Specialties.Select(s => s.Id).FirstOrDefaultAsync();
+                    if (defaultSpecialtyId > 0)
+                    {
+                        context.Doctors.Add(new Doctor
+                        {
+                            UserId = existing.Id,
+                            SpecialtyId = defaultSpecialtyId,
+                            FullName = string.IsNullOrWhiteSpace(existing.FullName) ? "BS. Trần Thị B" : existing.FullName,
+                            Degree = "Bác sĩ CKI",
+                            YearsOfExperience = 5,
+                            ConsultationFee = 200000m,
+                            IsActive = true,
+                            CreatedAt = DateTime.Now
+                        });
+                        await context.SaveChangesAsync();
+                    }
+                }
                 return;
             }
 
@@ -167,9 +243,11 @@ namespace DatLichKhamBenh.Data.Seed
                 UserName = email,
                 Email = email,
                 EmailConfirmed = true,
+                FullName = "BS. Trần Thị B",
                 FirstName = "B",
                 MiddleName = "Trần Thị",
                 PhoneNumber = "0912345678",
+                IsActive = true,
                 MustChangePassword = true,
                 LockoutEnabled = true
             };
@@ -200,6 +278,10 @@ namespace DatLichKhamBenh.Data.Seed
             {
                 UserId = user.Id,
                 SpecialtyId = specialty.Id,
+                FullName = user.FullName,
+                Degree = "Bác sĩ CKI",
+                YearsOfExperience = 5,
+                ConsultationFee = 200000m,
                 IsActive = true,
                 CreatedAt = DateTime.Now
             });
@@ -239,8 +321,10 @@ namespace DatLichKhamBenh.Data.Seed
                 UserName = email,
                 Email = email,
                 EmailConfirmed = true,
+                FullName = "Lễ tân Mẫu",
                 FirstName = "Lễ tân",
                 MiddleName = "Mẫu",
+                IsActive = true,
                 LockoutEnabled = true,
                 MustChangePassword = true
             };

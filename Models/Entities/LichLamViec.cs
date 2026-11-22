@@ -4,38 +4,42 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DatLichKhamBenh.Models.Entities
 {
-    [Table("lich_lam_viec")]
-    public class LichLamViec
+    [Table("DoctorSchedule")]
+    public class DoctorSchedule
     {
         [Key]
-        [Column("id")]
+        [Column("Id")]
         public int Id { get; set; }
 
-        [Column("le_tan_ma_le_tan")]
-        public int? LeTanMaLeTan { get; set; }
+        [Column("DoctorId")]
+        public int DoctorId { get; set; }
 
-        [Column("bac_si_id")]
-        public int BacSiId { get; set; }
+        [ForeignKey(nameof(DoctorId))]
+        public virtual Doctor Doctor { get; set; } = null!;
 
-        [ForeignKey(nameof(BacSiId))]
-        public virtual BacSi BacSi { get; set; } = null!;
+        [Column("WorkDate", TypeName = "date")]
+        public DateTime WorkDate { get; set; }
 
-        [Column("ngay_kham")]
-        public DateTime NgayKham { get; set; }
+        [Column("Shift")]
+        [MaxLength(50)]
+        public string Shift { get; set; } = string.Empty;
 
-        [Column("khung_gio")]
-        public string KhungGio { get; set; } = string.Empty;
+        [Column("RoomName")]
+        [MaxLength(100)]
+        public string? RoomName { get; set; }
 
-        [Column("con_trong")]
-        public bool ConTrong { get; set; } = true;
+        [Column("TimeSlot")]
+        [MaxLength(50)]
+        public string TimeSlot { get; set; } = string.Empty;
 
-        [Column("ly_do_ban")]
-        public string LyDoBan { get; set; } = string.Empty;
+        [Column("IsAvailable")]
+        public bool IsAvailable { get; set; } = true;
 
-        [Column("trang_thai_chi_tiet")]
-        public string TrangThaiChiTiet { get; set; } = string.Empty;
+        [Column("AbsenceReason")]
+        [MaxLength(500)]
+        public string? AbsenceReason { get; set; }
 
         [NotMapped]
-        public virtual BacSi? BacSiThongTin { get; set; }
+        public int MaLichLamViec => Id;
     }
 }

@@ -1,33 +1,31 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DatLichKhamBenh.Models.Entities
 {
-    [Table("dich_vu")]
-    public class DichVu
+    [Table("Service")]
+    public class Service
     {
         [Key]
-        [Column("id")]
+        [Column("Id")]
         public int Id { get; set; }
 
-        [Column("chuyen_khoa_id")]
-        public int ChuyenKhoaId { get; set; }
-        [ForeignKey("ChuyenKhoaId")]
-        public virtual ChuyenKhoa ChuyenKhoa { get; set; }
+        [Column("SpecialtyId")]
+        public int SpecialtyId { get; set; }
 
-        [Column("ten_dich_vu")]
-        public string TenDichVu { get; set; }
+        [ForeignKey(nameof(SpecialtyId))]
+        public virtual Specialty? Specialty { get; set; }
 
-        [Column("gia_tien")]
-        public decimal GiaTien { get; set; }
+        [Required]
+        [Column("Name")]
+        [MaxLength(250)]
+        public string Name { get; set; } = string.Empty;
 
-        [Column("mo_ta")]
-        public string MoTa { get; set; }
+        [Column("Price", TypeName = "decimal(18, 2)")]
+        public decimal Price { get; set; } = 0m;
 
-        [Column("dang_hoat_dong")]
-        public bool DangHoatDong { get; set; } = true;
-
-        [Column("trang_thai")]
-        public string TrangThai { get; set; } = "active";
+        [NotMapped]
+        public int MaDichVu => Id;
     }
 }

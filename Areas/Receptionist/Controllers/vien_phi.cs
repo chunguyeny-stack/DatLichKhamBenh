@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+<<<<<<< HEAD
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Authorization;
+=======
+>>>>>>> 44ae3b0 (cập nhật lại dữ liệu, và giao diện lễ tân)
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DatLichKhamBenh.Data.Context;
@@ -14,206 +15,168 @@ using DatLichKhamBenh.Models.Entities;
 namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 {
     [Area("Receptionist")]
+<<<<<<< HEAD
     [Authorize(Roles = "Receptionist")]
+=======
+    // [Authorize(Roles = "Receptionist")]
+>>>>>>> 44ae3b0 (cập nhật lại dữ liệu, và giao diện lễ tân)
     public class vien_phi : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly IWebHostEnvironment _env;
 
-        public vien_phi(ApplicationDbContext context, IWebHostEnvironment env)
+        public vien_phi(ApplicationDbContext context)
         {
             _context = context;
-            _env = env;
         }
+
+        private DbSet<Appointment> AppointmentSet => _context.Set<Appointment>();
 
         public record PayRequest(int lich_hen_id, decimal? tong_tien, string? phuong_thuc);
 
-        private async Task<List<Dictionary<string, object?>>> QueryRowsAsync(string sql)
-        {
-            var rows = new List<Dictionary<string, object?>>();
-            var conn = _context.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Open) await conn.OpenAsync();
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = sql;
-            await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-                for (int i = 0; i < reader.FieldCount; i++)
-                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                rows.Add(row);
-            }
-            return rows;
-        }
-
-        private static string PickStr(IDictionary<string, object?> r, string fb, params string[] keys)
-        {
-            foreach (var k in keys)
-                if (r.TryGetValue(k, out var v) && v != null && v != DBNull.Value)
-                {
-                    var s = Convert.ToString(v);
-                    if (!string.IsNullOrWhiteSpace(s)) return s!;
-                }
-            return fb;
-        }
-
-        private static int PickInt(IDictionary<string, object?> r, int fb, params string[] keys)
-        {
-            foreach (var k in keys)
-                if (r.TryGetValue(k, out var v) && v != null && v != DBNull.Value && int.TryParse(Convert.ToString(v), out var n)) return n;
-            return fb;
-        }
-
-        private static decimal PickDec(IDictionary<string, object?> r, decimal fb, params string[] keys)
-        {
-            foreach (var k in keys)
-                if (r.TryGetValue(k, out var v) && v != null && v != DBNull.Value && decimal.TryParse(Convert.ToString(v), out var m)) return m;
-            return fb;
-        }
-
-        private static DateTime PickDate(IDictionary<string, object?> r, params string[] keys)
-        {
-            foreach (var k in keys)
-                if (r.TryGetValue(k, out var v) && v != null && v != DBNull.Value && DateTime.TryParse(Convert.ToString(v), out var d)) return d.Date;
-            return DateTime.Today;
-        }
-
-        private IActionResult ResolveView(object? model = null)
+        private IActionResult BuildView(object? model = null)
         {
             ViewBag.ReceptionistName = User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name)
                 ? User.Identity.Name
                 : "Lễ tân";
 
-            string[] candidates =
-            {
-                "~/Areas/Receptionist/Views/vien_phi/vien_phi.cshtml",
-                "~/Areas/Receptionist/Views/Payment/vien_phi.cshtml",
-                "~/Areas/Receptionist/Views/Invoice/vien_phi.cshtml",
-                "~/Areas/Receptionist/Views/Home/vien_phi.cshtml",
-                "~/Areas/Receptionist/Views/vien_phi/Index.cshtml"
-            };
+            return model == null ? View("~/Areas/Receptionist/Views/Billing/vien_phi.cshtml") : View("~/Areas/Receptionist/Views/Billing/vien_phi.cshtml", model);
+        }
 
-            foreach (var v in candidates)
-            {
-                var full = Path.Combine(_env.ContentRootPath, v.TrimStart('~', '/').Replace('/', Path.DirectorySeparatorChar));
-                if (System.IO.File.Exists(full))
-                    return model == null ? View(v) : View(v, model);
-            }
+        private static bool IsCanPay(string? status)
+        {
+            var st = (status ?? string.Empty).Trim().ToLower();
+            return st == "hoàn thành" || st == "đã hoàn thành" || st == "completed";
+        }
 
-            var viewsRoot = Path.Combine(_env.ContentRootPath, "Areas", "Receptionist", "Views");
-            if (Directory.Exists(viewsRoot))
-            {
-                var found = Directory.GetFiles(viewsRoot, "vien_phi.cshtml", SearchOption.AllDirectories).FirstOrDefault();
-                if (!string.IsNullOrWhiteSpace(found))
-                {
-                    var rel = "~/" + Path.GetRelativePath(_env.ContentRootPath, found).Replace('\\', '/');
-                    return model == null ? View(rel) : View(rel, model);
-                }
-            }
+        private static bool IsAlreadyPaid(string? status)
+        {
+            var st = (status ?? string.Empty).Trim().ToLower();
+            return st == "đã thanh toán" || st == "paid";
+        }
 
-            return Content("Không tìm thấy file view vien_phi.cshtml trong Areas/Receptionist/Views.", "text/plain; charset=utf-8");
+        private async Task<(decimal tienKham, decimal tienThuoc, decimal tienDichVu, decimal tongTien, string tenDichVu)> TinhTongTienAsync(Appointment appt)
+        {
+            var doctorFee = appt.Doctor?.ConsultationFee
+                ?? await _context.Doctors
+                    .AsNoTracking()
+                    .Where(d => d.Id == appt.DoctorId)
+                    .Select(d => (decimal?)d.ConsultationFee)
+                    .FirstOrDefaultAsync()
+                ?? 0m;
+
+            decimal tienKham = appt.ConsultationFee > 0 ? appt.ConsultationFee : doctorFee;
+            decimal tienThuoc = appt.MedicineFee;
+            decimal tienDichVu = appt.ServiceFee;
+            decimal tongTien = tienKham + tienThuoc + tienDichVu;
+            string tenDichVu = tienDichVu > 0 ? "Dịch vụ khám" : "Khám bệnh";
+
+            return (tienKham, tienThuoc, tienDichVu, tongTien, tenDichVu);
         }
 
         [HttpGet]
         public async Task<IActionResult> Index(string? maLichHen)
         {
             if (string.IsNullOrWhiteSpace(maLichHen))
-                return ResolveView();
+                return BuildView();
 
             var cleanCode = maLichHen.Trim().ToUpper().Replace("LH", "");
             if (!int.TryParse(cleanCode, out int id))
             {
                 TempData["Error"] = "Mã lịch hẹn không hợp lệ.";
-                return ResolveView();
+                return BuildView();
             }
 
-            var lichHen = await _context.LichHens
-                .Include(x => x.BenhNhan)
-                .Include(x => x.BacSiThongTin)
+            var appointment = await AppointmentSet
+                .Include(x => x.Patient)
+                    .ThenInclude(p => p!.User)
+                .Include(x => x.Doctor)
+                    .ThenInclude(d => d!.User)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
-            if (lichHen == null)
+            if (appointment == null)
             {
                 TempData["Error"] = $"Không tìm thấy lịch hẹn #{id}.";
-                return ResolveView();
+                return BuildView();
             }
 
-            var daKhamXong = lichHen.TrangThai == "Hoàn thành"
-                          || lichHen.TrangThai == "Đã hoàn thành"
-                          || lichHen.TrangThai == "Đã thanh toán";
+            var isPaid = IsAlreadyPaid(appointment.Status);
+            var canPay = IsCanPay(appointment.Status);
 
-            if (!daKhamXong)
+            if (!canPay && !isPaid)
             {
                 TempData["Error"] = "Chỉ thu viện phí cho lịch hẹn đã khám xong (Hoàn thành).";
-                return ResolveView();
+                return BuildView();
             }
 
-            var (tienKham, tienThuoc, tienDichVu, tongTien) = await TinhTongTienAsync(lichHen);
+            var (tienKham, tienThuoc, tienDichVu, tongTien, tenDichVu) = await TinhTongTienAsync(appointment);
 
             ViewBag.TienKham = tienKham;
             ViewBag.TienThuoc = tienThuoc;
             ViewBag.TienDichVu = tienDichVu;
             ViewBag.TongTien = tongTien;
-            ViewBag.DaThanhToan = lichHen.TrangThai == "Đã thanh toán";
+            ViewBag.TenDichVu = tenDichVu;
+            ViewBag.DaThanhToan = isPaid;
 
-            return ResolveView(lichHen);
+            return BuildView(appointment);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetInvoicesData()
         {
-            var docRows = await QueryRowsAsync("SELECT * FROM [bac_si]");
-            var docNameMap = docRows.ToDictionary(r => PickInt(r, 0, "id", "Id"), r => PickStr(r, "Bác sĩ", "ho_ten", "HoTen"));
-            var docFeeMap = docRows.ToDictionary(r => PickInt(r, 0, "id", "Id"), r => PickDec(r, 300000m, "gia_kham", "GiaKham"));
+            var appointments = await AppointmentSet
+                .AsNoTracking()
+                .Include(a => a.Doctor)
+                    .ThenInclude(d => d!.User)
+                .Include(a => a.Patient)
+                    .ThenInclude(p => p!.User)
+                .OrderByDescending(a => a.Id)
+                .ToListAsync();
 
-            var dvRows = await QueryRowsAsync("SELECT * FROM [dich_vu]");
-            var dvMap = dvRows.ToDictionary(
-                r => PickInt(r, 0, "id", "Id"),
-                r => (Name: PickStr(r, "Khám chuyên khoa", "ten_dich_vu", "TenDichVu"), Price: PickDec(r, 0m, "gia_tien", "GiaTien"))
-            );
-
-            var lhRows = await QueryRowsAsync("SELECT * FROM [lich_hen] ORDER BY [id] DESC");
             var invoices = new List<object>();
             var payments = new List<object>();
 
-            foreach (var r in lhRows)
+            foreach (var a in appointments)
             {
-                var id = PickInt(r, 0, "id", "Id");
-                if (id <= 0) continue;
-                var bacSiId = PickInt(r, 0, "bac_si_id", "BacSiId");
-                var dichVuId = PickInt(r, 0, "dich_vu_id", "DichVuId");
-                var status = PickStr(r, "Chờ xác nhận", "trang_thai", "TrangThai").Trim();
-                var lower = status.ToLower();
-                var ngay = PickDate(r, "ngay_kham", "NgayKham");
-                var gio = PickStr(r, "08:00 - 08:30", "khung_gio", "KhungGio");
+                var status = (a.Status ?? "Chờ").Trim();
+                var isPaid = IsAlreadyPaid(status);
+                var canPay = IsCanPay(status);
 
-                var isPaid = lower.Contains("đã thanh toán") || lower.Contains("paid");
-                var canPay = isPaid || lower.Contains("hoàn thành") || lower.Contains("completed") || lower.Contains("check-in") || lower.Contains("checked") || lower.Contains("đã đến");
+                var consultationFee = a.ConsultationFee > 0 ? a.ConsultationFee : (a.Doctor?.ConsultationFee ?? 0m);
+                var serviceFee = a.ServiceFee;
+                var medicineFee = a.MedicineFee;
+                var serviceName = serviceFee > 0 ? "Dịch vụ khám" : "Khám bệnh";
+                var doctorName = !string.IsNullOrWhiteSpace(a.Doctor?.FullName)
+                    ? a.Doctor!.FullName
+                    : (!string.IsNullOrWhiteSpace(a.Doctor?.User?.FullName) ? a.Doctor!.User!.FullName : $"BS #{a.DoctorId}");
+                var patientName = !string.IsNullOrWhiteSpace(a.Patient?.FullName)
+                    ? a.Patient!.FullName
+                    : (!string.IsNullOrWhiteSpace(a.Patient?.User?.FullName) ? a.Patient!.User!.FullName : $"BN #{a.PatientId}");
 
-                var fee = docFeeMap.TryGetValue(bacSiId, out var fk) && fk > 0 ? fk : 300000m;
-                var dvInfo = dvMap.TryGetValue(dichVuId, out var dv) ? dv : (Name: "Dịch vụ khám", Price: 0m);
-                var items = new List<object>
-                {
-                    new { name = "Phí khám bác sĩ", qty = 1, price = fee }
-                };
-                if (dvInfo.Price > 0)
-                    items.Add(new { name = dvInfo.Name, qty = 1, price = dvInfo.Price });
+                var items = new List<object>();
+                if (consultationFee > 0)
+                    items.Add(new { name = "Phí khám bác sĩ", qty = 1, price = consultationFee });
+                if (serviceFee > 0)
+                    items.Add(new { name = serviceName, qty = 1, price = serviceFee });
+                if (medicineFee > 0)
+                    items.Add(new { name = "Tiền thuốc", qty = 1, price = medicineFee });
 
-                var total = fee + dvInfo.Price;
-                var code = $"LH{id:D3}";
+                var total = consultationFee + serviceFee + medicineFee;
+                var code = $"LH{a.Id:D3}";
 
                 invoices.Add(new
                 {
-                    rawId = id,
+                    rawId = a.Id,
                     code,
-                    doctor = docNameMap.TryGetValue(bacSiId, out var dn) ? dn : $"BS #{bacSiId}",
-                    time = gio,
-                    date = ngay.ToString("yyyy-MM-dd"),
-                    dateDisplay = ngay.ToString("dd/MM/yyyy"),
-                    specialty = dvInfo.Name,
+                    doctor = doctorName,
+                    patientName,
+                    time = a.TimeSlot,
+                    date = a.AppointmentDate.ToString("yyyy-MM-dd"),
+                    dateDisplay = a.AppointmentDate.ToString("dd/MM/yyyy"),
+                    specialty = serviceName,
                     statusText = status,
                     isPaid,
                     canPay,
+                    totalAmount = total,
                     items
                 });
 
@@ -221,11 +184,11 @@ namespace DatLichKhamBenh.Areas.Receptionist.Controllers
                 {
                     payments.Add(new
                     {
-                        invoiceId = $"HD-{id:D4}",
+                        invoiceId = $"HD-{a.Id:D4}",
                         appointmentCode = code,
                         totalAmount = total,
-                        paidAt = ngay.ToString("yyyy-MM-dd"),
-                        paidAtDisplay = ngay.ToString("dd/MM/yyyy")
+                        paidAt = a.AppointmentDate.ToString("yyyy-MM-dd"),
+                        paidAtDisplay = a.AppointmentDate.ToString("dd/MM/yyyy")
                     });
                 }
             }
@@ -241,26 +204,36 @@ namespace DatLichKhamBenh.Areas.Receptionist.Controllers
             if (targetId <= 0)
                 return body != null ? BadRequest(new { success = false, detail = "Mã lịch hẹn không hợp lệ." }) : NotFound();
 
-            var lichHen = await _context.LichHens
-                .Include(x => x.BacSiThongTin)
+            var appointment = await AppointmentSet
+                .Include(x => x.Doctor)
                 .FirstOrDefaultAsync(x => x.Id == targetId);
 
-            if (lichHen == null)
+            if (appointment == null)
                 return body != null ? NotFound(new { success = false, detail = "Không tìm thấy lịch hẹn." }) : NotFound();
 
-            var st = (lichHen.TrangThai ?? "").Trim().ToLower();
-            var allowed = st.Contains("hoàn thành") || st.Contains("completed") || st.Contains("check-in") || st.Contains("checked") || st.Contains("đã đến") || st.Contains("đã thanh toán");
-            if (!allowed)
+            if (IsAlreadyPaid(appointment.Status))
             {
-                if (body != null) return BadRequest(new { success = false, detail = "Chỉ thu tiền cho lịch hẹn đã khám/check-in." });
+                if (body != null)
+                    return BadRequest(new { success = false, detail = "Lịch hẹn này đã được thanh toán trước đó." });
+
+                TempData["Error"] = "Lịch hẹn này đã được thanh toán trước đó.";
+                return RedirectToAction(nameof(Index), new { maLichHen = targetId });
+            }
+
+            if (!IsCanPay(appointment.Status))
+            {
+                if (body != null)
+                    return BadRequest(new { success = false, detail = "Chỉ thu tiền cho lịch hẹn đã hoàn thành khám." });
+
                 TempData["Error"] = "Lịch hẹn chưa ở trạng thái Hoàn thành, không thể xác nhận thanh toán.";
                 return RedirectToAction(nameof(Index), new { maLichHen = targetId });
             }
 
-            var (_, _, _, tongTien) = await TinhTongTienAsync(lichHen);
-            if (tongTien <= 0 && body?.tong_tien is > 0) tongTien = body.tong_tien.Value;
+            var (_, _, _, tongTien, _) = await TinhTongTienAsync(appointment);
+            if (tongTien <= 0 && body?.tong_tien is > 0)
+                tongTien = body.tong_tien.Value;
 
-            lichHen.TrangThai = "Đã thanh toán";
+            appointment.Status = "Đã thanh toán";
             await _context.SaveChangesAsync();
 
             if (body != null)
@@ -268,16 +241,6 @@ namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 
             TempData["Success"] = $"Đã xác nhận thanh toán {tongTien:N0} VNĐ cho lịch hẹn #{targetId}.";
             return RedirectToAction(nameof(Index), new { maLichHen = targetId });
-        }
-
-        private async Task<(decimal tienKham, decimal tienThuoc, decimal tienDichVu, decimal tongTien)> TinhTongTienAsync(LichHen lichHen)
-        {
-            var tienKham = lichHen.BacSiThongTin?.GiaKham ?? 0m;
-            var dichVu = await _context.DichVus.FindAsync(lichHen.DichVuId);
-            var tienDichVu = dichVu?.GiaTien ?? 0m;
-            decimal tienThuoc = 0m;
-            var tongTien = tienKham + tienThuoc + tienDichVu;
-            return (tienKham, tienThuoc, tienDichVu, tongTien);
         }
     }
 }

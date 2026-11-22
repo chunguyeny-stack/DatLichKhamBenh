@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
-using DatLichKhamBenh.Models.Enums;
+using DoctorEntity = DatLichKhamBenh.Models.Entities.Doctor;
 
 namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 {
@@ -27,224 +27,290 @@ namespace DatLichKhamBenh.Areas.Receptionist.Controllers
             _env = env;
         }
 
-        public record SchedulePayload(int bac_si_id, string ngay_lam_viec, string? ca_lam_viec, string? gio_bat_dau, string? gio_ket_thuc, string? trang_thai, string? ly_do_ban);
+        private DbSet<Appointment> AppointmentSet => _context.Set<Appointment>();
 
-        private static T GetCol<T>(IDataRecord r, string name, T fallback)
+        public record SchedulePayload(
+            int bac_si_id,
+            string ngay_lam_viec,
+            string? ca_lam_viec,
+            string? gio_bat_dau,
+            string? gio_ket_thuc,
+            string? trang_thai,
+            string? ly_do_ban
+        );
+
+        private static string GetDoctorDisplayName(DoctorEntity? doc, int doctorId)
         {
-            try
+            if (!string.IsNullOrWhiteSpace(doc?.FullName))
+                return doc!.FullName;
+            if (!string.IsNullOrWhiteSpace(doc?.User?.FullName))
+                return doc!.User!.FullName;
+            return $"BS #{doctorId}";
+        }
+
+        private static bool TryParseWorkDate(string? rawDate, out DateTime parsedDate)
+        {
+            parsedDate = default;
+            if (string.IsNullOrWhiteSpace(rawDate))
+                return false;
+
+            string[] formats = { "yyyy-MM-dd", "dd/MM/yyyy", "MM/dd/yyyy" };
+            if (DateTime.TryParseExact(rawDate.Trim(), formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate))
             {
-                var i = r.GetOrdinal(name);
-                if (r.IsDBNull(i)) return fallback;
-                var v = r.GetValue(i);
-                if (v == null || v == DBNull.Value) return fallback;
-                if (typeof(T) == typeof(string)) return (T)(object)(Convert.ToString(v) ?? "");
-                if (typeof(T) == typeof(int)) return (T)(object)Convert.ToInt32(v);
-                if (typeof(T) == typeof(bool)) return (T)(object)Convert.ToBoolean(v);
-                if (typeof(T) == typeof(DateTime)) return (T)(object)Convert.ToDateTime(v).Date;
-                return (T)v;
+                parsedDate = parsedDate.Date;
+                return true;
             }
-            catch { return fallback; }
-        }
 
-        private async Task<List<Dictionary<string, object?>>> QueryRowsAsync(string sql)
-        {
-            var rows = new List<Dictionary<string, object?>>();
-            var conn = _context.Database.GetDbConnection();
-            if (conn.State != ConnectionState.Open) await conn.OpenAsync();
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = sql;
-            await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
+            if (DateTime.TryParse(rawDate.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate))
             {
-                var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-                for (int i = 0; i < reader.FieldCount; i++)
-                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                rows.Add(row);
+                parsedDate = parsedDate.Date;
+                return true;
             }
-            return rows;
+
+            return false;
         }
 
-        private static string PickStr(IDictionary<string, object?> r, string fb, params string[] keys)
+        private static string BuildTimeSlot(string? gioBatDau, string? gioKetThuc, string? caLamViec)
         {
-            foreach (var k in keys)
-                if (r.TryGetValue(k, out var v) && v != null && v != DBNull.Value)
-                {
-                    var s = Convert.ToString(v);
-                    if (!string.IsNullOrWhiteSpace(s)) return s!;
-                }
-            return fb;
+            var start = (gioBatDau ?? "").Trim();
+            var end = (gioKetThuc ?? "").Trim();
+            if (!string.IsNullOrWhiteSpace(start) && !string.IsNullOrWhiteSpace(end))
+                return $"{start} - {end}";
+            if (!string.IsNullOrWhiteSpace(start))
+                return start;
+
+            var ca = (caLamViec ?? "").Trim().ToLower();
+            if (ca.Contains("chiều") || ca.Contains("chieu"))
+                return "13:30 - 18:30";
+            if (ca.Contains("tối") || ca.Contains("toi"))
+                return "18:30 - 22:30";
+            return "07:30 - 11:30";
         }
 
-        private static int PickInt(IDictionary<string, object?> r, int fb, params string[] keys)
+        private static (string startTime, string endTime) SplitTimeSlot(string? timeSlot)
         {
-            foreach (var k in keys)
-                if (r.TryGetValue(k, out var v) && v != null && v != DBNull.Value && int.TryParse(Convert.ToString(v), out var n)) return n;
-            return fb;
+            var raw = (timeSlot ?? "07:30 - 11:30").Trim();
+            var parts = raw.Split('-', 2);
+            var s = parts.Length > 0 && !string.IsNullOrWhiteSpace(parts[0]) ? parts[0].Trim() : "07:30";
+            var e = parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]) ? parts[1].Trim() : "11:30";
+            return (s, e);
         }
 
-        private static bool PickBool(IDictionary<string, object?> r, bool fb, params string[] keys)
+        private static object MapScheduleDto(DoctorSchedule s)
         {
-            foreach (var k in keys)
-                if (r.TryGetValue(k, out var v) && v != null && v != DBNull.Value) return Convert.ToBoolean(v);
-            return fb;
+            var (startT, endT) = SplitTimeSlot(s.TimeSlot);
+            return new
+            {
+                id = s.Id,
+                bac_si_id = s.DoctorId,
+                ngay_lam_viec = s.WorkDate.ToString("yyyy-MM-dd"),
+                ca_lam_viec = string.IsNullOrWhiteSpace(s.Shift) ? "Ca sáng" : s.Shift,
+                khung_gio = s.TimeSlot,
+                gio_bat_dau = startT,
+                gio_ket_thuc = endT,
+                phong_kham = s.RoomName ?? "",
+                is_available = s.IsAvailable,
+                trang_thai = s.IsAvailable ? "da_xac_nhan" : "ban",
+                ly_do_ban = s.AbsenceReason ?? ""
+            };
         }
-
-        private static DateTime PickDate(IDictionary<string, object?> r, params string[] keys)
-        {
-            foreach (var k in keys)
-                if (r.TryGetValue(k, out var v) && v != null && v != DBNull.Value && DateTime.TryParse(Convert.ToString(v), out var d)) return d.Date;
-            return DateTime.Today;
-        }
-
-        private async Task<List<(int Id, string HoTen, string SoDienThoai, string Email)>> ReadDoctorsSafeAsync() =>
-            (await QueryRowsAsync("SELECT * FROM [bac_si]"))
-            .Select(r => (PickInt(r, 0, "id", "Id"), PickStr(r, $"Bác sĩ #{PickInt(r, 0, "id", "Id")}", "ho_ten", "HoTen"), PickStr(r, "", "so_dien_thoai", "SoDienThoai"), PickStr(r, "", "email", "Email")))
-            .Where(x => x.Item1 > 0).ToList();
-
-        private async Task<List<(int Id, int BacSiId, DateTime NgayKham, string KhungGio, bool ConTrong, string LyDoBan, string TrangThaiChiTiet)>> ReadSchedulesSafeAsync() =>
-            (await QueryRowsAsync("SELECT * FROM [lich_lam_viec] ORDER BY [ngay_kham], [khung_gio]"))
-            .Select(r => (PickInt(r, 0, "id", "Id"), PickInt(r, 0, "bac_si_id", "BacSiId"), PickDate(r, "ngay_kham", "NgayKham"), PickStr(r, "07:30 - 11:30", "khung_gio", "KhungGio"), PickBool(r, true, "con_trong", "ConTrong"), PickStr(r, "", "ly_do_ban", "LyDoBan"), PickStr(r, "", "trang_thai_chi_tiet", "TrangThaiChiTiet")))
-            .ToList();
 
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            ViewBag.ReceptionistName = User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name) ? User.Identity.Name : "Lễ tân";
-            var docs = await ReadDoctorsSafeAsync();
-            var doctorsSafe = docs.Select(d => new BacSi { Id = d.Id, HoTen = d.HoTen, SoDienThoai = d.SoDienThoai, Email = d.Email }).ToList();
-            var docMap = doctorsSafe.ToDictionary(d => d.Id, d => d.HoTen);
-            var schedules = (await ReadSchedulesSafeAsync()).Select(s => new LichLamViec
-            {
-                Id = s.Id, BacSiId = s.BacSiId, NgayKham = s.NgayKham, KhungGio = s.KhungGio, ConTrong = s.ConTrong,
-                LyDoBan = s.LyDoBan, TrangThaiChiTiet = s.TrangThaiChiTiet,
-                BacSi = new BacSi { Id = s.BacSiId, HoTen = docMap.TryGetValue(s.BacSiId, out var n) ? n : $"BS #{s.BacSiId}" }
-            }).ToList();
+            ViewBag.ReceptionistName = User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name)
+                ? User.Identity.Name
+                : "Lễ tân";
 
-            ViewBag.Doctors = doctorsSafe;
-            string[] candidates = { "~/Areas/Receptionist/Views/quan_ly_lich_lam_viec_BS/quan_ly_lich_lam_viec_BS.cshtml", "~/Areas/Receptionist/Views/Schedule/quan_ly_lich_lam_viec_BS.cshtml", "~/Areas/Receptionist/Views/Home/quan_ly_lich_lam_viec_BS.cshtml", "~/Areas/Receptionist/Views/quan_ly_lich_lam_viec_BS/Index.cshtml" };
+            var doctors = await _context.Doctors
+                .AsNoTracking()
+                .Include(d => d.User)
+                .OrderBy(d => d.Id)
+                .ToListAsync();
+
+            var schedules = await _context.DoctorSchedules
+                .AsNoTracking()
+                .OrderBy(s => s.WorkDate)
+                .ThenBy(s => s.Id)
+                .ToListAsync();
+
+            ViewBag.Doctors = doctors;
+
+            string[] candidates =
+            {
+                "~/Areas/Receptionist/Views/quan_ly_lich_lam_viec_BS/quan_ly_lich_lam_viec_BS.cshtml",
+                "~/Areas/Receptionist/Views/Schedule/quan_ly_lich_lam_viec_BS.cshtml",
+                "~/Areas/Receptionist/Views/Home/quan_ly_lich_lam_viec_BS.cshtml",
+                "~/Areas/Receptionist/Views/quan_ly_lich_lam_viec_BS/Index.cshtml"
+            };
+
             foreach (var v in candidates)
             {
                 var full = Path.Combine(_env.ContentRootPath, v.TrimStart('~', '/').Replace('/', Path.DirectorySeparatorChar));
-                if (System.IO.File.Exists(full)) return View(v, schedules);
+                if (System.IO.File.Exists(full))
+                    return View(v, schedules);
             }
+
             return View(schedules);
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetDoctors() => Json((await ReadDoctorsSafeAsync()).Select(d => new { id = d.Id, name = d.HoTen }).ToList());
+        public async Task<IActionResult> GetDoctors()
+        {
+            var doctors = await _context.Doctors
+                .AsNoTracking()
+                .Include(d => d.User)
+                .OrderBy(d => d.Id)
+                .ToListAsync();
+
+            return Json(doctors.Select(d => new
+            {
+                id = d.Id,
+                name = GetDoctorDisplayName(d, d.Id)
+            }).ToList());
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetSchedules()
         {
-            var docMap = (await ReadDoctorsSafeAsync()).ToDictionary(d => d.Id, d => d.HoTen);
-            return Json((await ReadSchedulesSafeAsync()).Select(x => new
+            var schedules = await _context.DoctorSchedules
+                .AsNoTracking()
+                .OrderBy(s => s.WorkDate)
+                .ThenBy(s => s.Id)
+                .ToListAsync();
+
+            return Json(schedules.Select(MapScheduleDto).ToList());
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateSchedule([FromBody] SchedulePayload? payload)
+        {
+            if (payload == null || payload.bac_si_id <= 0)
+                return BadRequest(new { success = false, detail = "Thiếu thông tin bác sĩ hoặc dữ liệu gửi lên không hợp lệ." });
+
+            if (!TryParseWorkDate(payload.ngay_lam_viec, out var workDate))
+                return BadRequest(new { success = false, detail = "Ngày làm việc không hợp lệ." });
+
+            var doctorExists = await _context.Doctors.AsNoTracking().AnyAsync(d => d.Id == payload.bac_si_id);
+            if (!doctorExists)
+                return BadRequest(new { success = false, detail = $"Không tìm thấy bác sĩ #{payload.bac_si_id}." });
+
+            var statusLower = (payload.trang_thai ?? "").Trim().ToLower();
+            bool isBusy = statusLower.Contains("ban") || statusLower.Contains("bận") || !string.IsNullOrWhiteSpace(payload.ly_do_ban);
+
+            var entity = new DoctorSchedule
             {
-                id = x.Id, bac_si_id = x.BacSiId, doctorName = docMap.TryGetValue(x.BacSiId, out var n) ? n : $"BS #{x.BacSiId}",
-                ngay_lam_viec = x.NgayKham.ToString("yyyy-MM-dd"), khung_gio = x.KhungGio, gio_bat_dau = x.KhungGio,
-                status = !string.IsNullOrWhiteSpace(x.LyDoBan) || !x.ConTrong ? "bac_si_huy" : "da_xac_nhan",
-                trang_thai_chi_tiet = x.TrangThaiChiTiet, ly_do_ban = x.LyDoBan
-            }).ToList());
+                DoctorId = payload.bac_si_id,
+                WorkDate = workDate,
+                Shift = string.IsNullOrWhiteSpace(payload.ca_lam_viec) ? "Ca sáng" : payload.ca_lam_viec.Trim(),
+                TimeSlot = BuildTimeSlot(payload.gio_bat_dau, payload.gio_ket_thuc, payload.ca_lam_viec),
+                RoomName = null,
+                IsAvailable = !isBusy,
+                AbsenceReason = isBusy ? (string.IsNullOrWhiteSpace(payload.ly_do_ban) ? "Bận đột xuất" : payload.ly_do_ban.Trim()) : null
+            };
+
+            _context.DoctorSchedules.Add(entity);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, id = entity.Id, data = MapScheduleDto(entity) });
+        }
+
+        [HttpPut]
+        [HttpPost]
+        [Route("Receptionist/quan_ly_lich_lam_viec_BS/UpdateSchedule/{id:int}")]
+        public async Task<IActionResult> UpdateSchedule(int id, [FromBody] SchedulePayload? payload)
+        {
+            if (id <= 0 || payload == null)
+                return BadRequest(new { success = false, detail = "Dữ liệu cập nhật lịch làm việc không hợp lệ." });
+
+            var entity = await _context.DoctorSchedules.FirstOrDefaultAsync(s => s.Id == id);
+            if (entity == null)
+                return NotFound(new { success = false, detail = $"Không tìm thấy lịch làm việc #{id}." });
+
+            if (payload.bac_si_id > 0)
+            {
+                var doctorExists = await _context.Doctors.AsNoTracking().AnyAsync(d => d.Id == payload.bac_si_id);
+                if (!doctorExists)
+                    return BadRequest(new { success = false, detail = $"Không tìm thấy bác sĩ #{payload.bac_si_id}." });
+                entity.DoctorId = payload.bac_si_id;
+            }
+
+            if (TryParseWorkDate(payload.ngay_lam_viec, out var workDate))
+                entity.WorkDate = workDate;
+
+            if (!string.IsNullOrWhiteSpace(payload.ca_lam_viec))
+                entity.Shift = payload.ca_lam_viec.Trim();
+
+            if (!string.IsNullOrWhiteSpace(payload.gio_bat_dau) || !string.IsNullOrWhiteSpace(payload.gio_ket_thuc))
+                entity.TimeSlot = BuildTimeSlot(payload.gio_bat_dau, payload.gio_ket_thuc, entity.Shift);
+
+            var statusLower = (payload.trang_thai ?? "").Trim().ToLower();
+            bool hasBusyFlag = statusLower.Contains("ban") || statusLower.Contains("bận") || !string.IsNullOrWhiteSpace(payload.ly_do_ban);
+            bool hasAvailableFlag = statusLower.Contains("xac_nhan") || statusLower.Contains("xác nhận") || statusLower.Contains("available") || statusLower.Contains("lam_viec");
+
+            if (hasBusyFlag)
+            {
+                entity.IsAvailable = false;
+                entity.AbsenceReason = string.IsNullOrWhiteSpace(payload.ly_do_ban) ? "Bận đột xuất" : payload.ly_do_ban.Trim();
+            }
+            else if (hasAvailableFlag)
+            {
+                entity.IsAvailable = true;
+                entity.AbsenceReason = null;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, id = entity.Id, data = MapScheduleDto(entity) });
+        }
+
+        [HttpDelete]
+        [HttpPost]
+        [Route("Receptionist/quan_ly_lich_lam_viec_BS/DeleteSchedule/{id:int}")]
+        public async Task<IActionResult> DeleteSchedule(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { success = false, detail = "ID lịch làm việc không hợp lệ." });
+
+            var entity = await _context.DoctorSchedules.FirstOrDefaultAsync(s => s.Id == id);
+            if (entity == null)
+                return NotFound(new { success = false, detail = $"Không tìm thấy lịch làm việc #{id}." });
+
+            _context.DoctorSchedules.Remove(entity);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, id });
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAppointments()
         {
-            var rows = await QueryRowsAsync("SELECT * FROM [lich_hen] ORDER BY [ngay_kham], [khung_gio]");
-            return Json(new { data = rows.Select(r => {
-                var id = PickInt(r, 0, "id", "Id");
-                return new { id, ma_lich_hen = $"LH{id:D3}", bac_si_id = PickInt(r, 0, "bac_si_id", "BacSiId"), benh_nhan = $"LH{id:D3}", so_dien_thoai = "", ngay_kham = PickDate(r, "ngay_kham", "NgayKham").ToString("yyyy-MM-dd"), khung_gio = PickStr(r, "", "khung_gio", "KhungGio"), trang_thai = PickStr(r, "", "trang_thai", "TrangThai") };
-            }).ToList() });
-        }
+            var rows = await AppointmentSet
+                .AsNoTracking()
+                .Include(a => a.Patient)
+                    .ThenInclude(p => p!.User)
+                .OrderBy(a => a.AppointmentDate)
+                .ThenBy(a => a.TimeSlot)
+                .ToListAsync();
 
-        [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateSchedule([FromBody] SchedulePayload payload)
-        {
-            if (payload == null || payload.bac_si_id <= 0 || !DateTime.TryParse(payload.ngay_lam_viec, out var day))
-                return BadRequest(new { success = false, detail = "Dữ liệu ca trực không hợp lệ." });
-            var slot = !string.IsNullOrWhiteSpace(payload.gio_bat_dau) && !string.IsNullOrWhiteSpace(payload.gio_ket_thuc) ? $"{payload.gio_bat_dau} - {payload.gio_ket_thuc}" : (payload.ca_lam_viec ?? "07:30 - 11:30");
-            var entity = new LichLamViec { BacSiId = payload.bac_si_id, NgayKham = day.Date, KhungGio = slot, ConTrong = true, TrangThaiChiTiet = payload.ca_lam_viec ?? "Đã xác nhận", LyDoBan = payload.ly_do_ban ?? "" };
-            _context.LichLamViecs.Add(entity);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, id = entity.Id });
-        }
-
-        [HttpPut, ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateSchedule(int id, [FromBody] SchedulePayload payload)
-        {
-            var entity = await _context.LichLamViecs.FindAsync(id);
-            if (entity == null) return NotFound(new { success = false, detail = "Không tìm thấy ca trực." });
-            if (payload != null)
+            return Json(new
             {
-                if (payload.bac_si_id > 0) entity.BacSiId = payload.bac_si_id;
-                if (DateTime.TryParse(payload.ngay_lam_viec, out var day)) entity.NgayKham = day.Date;
-                if (!string.IsNullOrWhiteSpace(payload.gio_bat_dau) && !string.IsNullOrWhiteSpace(payload.gio_ket_thuc)) entity.KhungGio = $"{payload.gio_bat_dau} - {payload.gio_ket_thuc}";
-                if (!string.IsNullOrWhiteSpace(payload.ca_lam_viec)) entity.TrangThaiChiTiet = payload.ca_lam_viec;
-                if (payload.ly_do_ban != null) entity.LyDoBan = payload.ly_do_ban;
-            }
-            await _context.SaveChangesAsync();
-            return Json(new { success = true });
-        }
-
-        [HttpDelete, ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteSchedule(int id)
-        {
-            var entity = await _context.LichLamViecs.FindAsync(id);
-            if (entity == null) return NotFound(new { success = false, detail = "Không tìm thấy ca trực để xóa." });
-            _context.LichLamViecs.Remove(entity);
-            await _context.SaveChangesAsync();
-            return Json(new { success = true });
-        }
-
-        [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateScheduleRange(int doctorId, DateTime tuNgay, DateTime denNgay, List<CaKham> danhSachCa, int thoiLuongPhut)
-        {
-            var soNgay = (denNgay.Date - tuNgay.Date).Days + 1;
-            if (soNgay < 7 || soNgay > 14) { TempData["Error"] = "Khoảng thời gian lên lịch cho bác sĩ phải từ 7 đến 14 ngày."; return RedirectToAction(nameof(Index)); }
-            if (thoiLuongPhut != 15 && thoiLuongPhut != 30 && thoiLuongPhut != 45) { TempData["Error"] = "Thời lượng phiên khám chỉ hỗ trợ 15, 30 hoặc 45 phút."; return RedirectToAction(nameof(Index)); }
-
-            var caList = (danhSachCa?.Count > 0) ? danhSachCa : new List<CaKham> { CaKham.Sang, CaKham.Chieu, CaKham.Toi };
-            var newItems = new List<LichLamViec>();
-            for (var day = tuNgay.Date; day <= denNgay.Date; day = day.AddDays(1))
-                foreach (var ca in caList)
-                    foreach (var slot in TaoCacKhungGioTheoCa(ca, thoiLuongPhut))
-                        if (!await _context.LichLamViecs.AnyAsync(x => x.BacSiId == doctorId && x.NgayKham.Date == day && x.KhungGio == slot))
-                            newItems.Add(new LichLamViec { BacSiId = doctorId, NgayKham = day, KhungGio = slot, ConTrong = true, TrangThaiChiTiet = $"Làm việc ({ca} - {thoiLuongPhut}p)" });
-
-            _context.LichLamViecs.AddRange(newItems);
-            await _context.SaveChangesAsync();
-            TempData["Success"] = $"Đã tạo {newItems.Count} phiên làm việc từ {tuNgay:dd/MM/yyyy} đến {denNgay:dd/MM/yyyy}.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> MarkAbsent(int id, string? lyDo)
-        {
-            var lv = await _context.LichLamViecs.FindAsync(id);
-            if (lv == null) return NotFound();
-            var reason = string.IsNullOrWhiteSpace(lyDo) ? "Bác sĩ nghỉ đột xuất" : lyDo.Trim();
-            lv.ConTrong = false; lv.LyDoBan = reason; lv.TrangThaiChiTiet = "Nghỉ đột xuất";
-
-            var affected = await _context.LichHens.Where(x => x.BacSiId == lv.BacSiId && x.NgayKham.Date == lv.NgayKham.Date && x.KhungGio == lv.KhungGio && x.TrangThai != "Đã hủy" && x.TrangThai != "Hoàn thành" && x.TrangThai != "Đã hoàn thành").ToListAsync();
-            var msg = $"Bác sĩ nghỉ đột xuất ({reason}) vào {lv.NgayKham:dd/MM/yyyy} ({lv.KhungGio}). Vui lòng liên hệ/chọn lịch đổi mới.";
-            foreach (var lh in affected) { lh.TrangThai = "Chờ đổi lịch"; lh.GhiChu = string.IsNullOrWhiteSpace(lh.GhiChu) ? msg : $"{lh.GhiChu} | {msg}"; }
-
-            await _context.SaveChangesAsync();
-            TempData["Success"] = $"Đã ghi nhận bác sĩ nghỉ đột xuất và đánh dấu {affected.Count} lịch hẹn cần đổi lịch.";
-            return RedirectToAction(nameof(Index));
-        }
-
-        private static List<string> TaoCacKhungGioTheoCa(CaKham ca, int stepMinutes)
-        {
-            var (start, end) = ca switch
-            {
-                CaKham.Sang => (new TimeSpan(7, 30, 0), new TimeSpan(11, 30, 0)),
-                CaKham.Chieu => (new TimeSpan(13, 30, 0), new TimeSpan(17, 30, 0)),
-                _ => (new TimeSpan(18, 0, 0), new TimeSpan(21, 30, 0))
-            };
-            var res = new List<string>();
-            for (var cur = start; cur.Add(TimeSpan.FromMinutes(stepMinutes)) <= end; cur = cur.Add(TimeSpan.FromMinutes(stepMinutes)))
-                res.Add($"{cur:hh\\:mm} - {cur.Add(TimeSpan.FromMinutes(stepMinutes)):hh\\:mm}");
-            return res;
+                data = rows.Select(r => new
+                {
+                    id = r.Id,
+                    ma_lich_hen = $"LH{r.Id:D3}",
+                    bac_si_id = r.DoctorId,
+                    benh_nhan = !string.IsNullOrWhiteSpace(r.Patient?.FullName)
+                        ? r.Patient!.FullName
+                        : (!string.IsNullOrWhiteSpace(r.Patient?.User?.FullName) ? r.Patient!.User!.FullName : $"BN #{r.PatientId}"),
+                    so_dien_thoai = !string.IsNullOrWhiteSpace(r.Patient?.PhoneNumber)
+                        ? r.Patient!.PhoneNumber
+                        : (r.Patient?.User?.PhoneNumber ?? ""),
+                    ngay_kham = r.AppointmentDate.ToString("yyyy-MM-dd"),
+                    khung_gio = r.TimeSlot,
+                    trang_thai = r.Status ?? ""
+                }).ToList()
+            });
         }
     }
 }

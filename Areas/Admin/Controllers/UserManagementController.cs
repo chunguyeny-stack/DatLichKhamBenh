@@ -1,12 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using DatLichKhamBenh.Models.Entities;
-using DatLichKhamBenh.Models.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using DatLichKhamBenh.Data.Context;
+using DatLichKhamBenh.Models.Entities;
+using DatLichKhamBenh.Models.ViewModels;
 using DatLichKhamBenh.Services.Interfaces;
-using System.Text.Encodings.Web;
 
 namespace DatLichKhamBenh.Areas.Admin.Controllers
 {
@@ -109,14 +113,17 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                 return View(model);
             }
 
+            var fullName = $"{model.MiddleName} {model.FirstName}".Trim();
+            if (string.IsNullOrWhiteSpace(fullName))
+                fullName = model.Email;
+
             var user = new ApplicationUser
             {
                 UserName = model.Email,
                 Email = model.Email,
-                FirstName = model.FirstName,
-                MiddleName = model.MiddleName,
+                FullName = fullName,
+                IsActive = true,
                 EmailConfirmed = true,
-                MustChangePassword = true, // Bắt buộc đổi MK lần đầu
                 LockoutEnabled = true
             };
 
@@ -148,6 +155,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                 {
                     UserId = user.Id,
                     SpecialtyId = model.SpecialtyId!.Value,
+                    FullName = fullName,
                     IsActive = true,
                     CreatedAt = DateTime.Now
                 });
@@ -190,8 +198,8 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             {
                 Id = user.Id,
                 Email = user.Email ?? "",
-                FullName = $"{user.MiddleName} {user.FirstName}".Trim(),
-                Reason = user.LockoutReason ?? ""
+                FullName = user.FullName,
+                Reason = ""
             };
             return View(model);
         }
@@ -229,10 +237,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // =======================================================
-        // 5. RESET MẬT KHẨU (MỚI THÊM THEO YÊU CẦU)
-        // =======================================================
-        
+        // 5. RESET MẬT KHẨU
         [HttpGet]
         public async Task<IActionResult> ResetPassword(string id)
         {
@@ -243,8 +248,8 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
 
             ViewBag.Email = user.Email;
             ViewBag.UserId = user.Id;
-            ViewBag.FullName = $"{user.MiddleName} {user.FirstName}".Trim();
-            
+            ViewBag.FullName = user.FullName;
+
             return View();
         }
 
@@ -302,12 +307,11 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                 }
                 ViewBag.Email = user.Email;
                 ViewBag.UserId = user.Id;
-                ViewBag.FullName = $"{user.MiddleName} {user.FirstName}".Trim();
+                ViewBag.FullName = user.FullName;
                 return View();
             }
 
             return RedirectToAction(nameof(Index));
         }
-
     }
 }

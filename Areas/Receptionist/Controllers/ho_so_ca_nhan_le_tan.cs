@@ -92,17 +92,9 @@ namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 
             var sqlRow = await QueryFirstUserRowAsync(user?.Id ?? claimUserId, user?.UserName ?? claimUserName);
 
-            var middle = GetColStr(sqlRow, "MiddleName", "middle_name");
-            var first = GetColStr(sqlRow, "FirstName", "first_name");
-            var hoTenDb = GetColStr(sqlRow, "HoTen", "ho_ten", "FullName", "full_name");
+            var fullNameDb = GetColStr(sqlRow, "FullName", "full_name", "HoTen", "ho_ten");
             var loginName = GetColStr(sqlRow, "UserName", "user_name") ?? (claimUserName ?? "");
-
-            var fullName = !string.IsNullOrWhiteSpace(hoTenDb)
-                ? hoTenDb
-                : ($"{middle} {first}").Trim();
-
-            if (string.IsNullOrWhiteSpace(fullName))
-                fullName = loginName;
+            var fullName = !string.IsNullOrWhiteSpace(fullNameDb) ? fullNameDb : loginName;
 
             var email = GetColStr(sqlRow, "Email", "email");
             var phone = GetColStr(sqlRow, "PhoneNumber", "phone_number", "SoDienThoai", "so_dien_thoai");
@@ -195,17 +187,8 @@ namespace DatLichKhamBenh.Areas.Receptionist.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var parts = targetName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 1)
-            {
-                user.MiddleName = "";
-                user.FirstName = parts[0];
-            }
-            else if (parts.Length > 1)
-            {
-                user.FirstName = parts[^1];
-                user.MiddleName = string.Join(" ", parts[..^1]);
-            }
+            if (!string.IsNullOrWhiteSpace(targetName))
+                user.FullName = targetName.Trim();
 
             user.PhoneNumber = string.IsNullOrWhiteSpace(targetPhone) ? null : targetPhone.Trim();
             if (!string.IsNullOrWhiteSpace(targetEmail))

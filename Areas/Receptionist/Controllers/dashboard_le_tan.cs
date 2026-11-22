@@ -9,7 +9,7 @@ using DatLichKhamBenh.Data.Context;
 namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 {
     [Area("Receptionist")]
-    [Authorize(Roles = "Receptionist")]
+    // [Authorize(Roles = "Receptionist")]
     public class dashboard_le_tan : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -22,33 +22,32 @@ namespace DatLichKhamBenh.Areas.Receptionist.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var lichHens = await _context.LichHens
+            var appointments = await _context.Appointments
                 .AsNoTracking()
-                .Select(x => new { x.TrangThai, x.KhungGio })
+                .Select(x => new { x.Status, x.TimeSlot })
                 .ToListAsync();
 
-            int tongLichHen = lichHens.Count;
+            int tongLichHen = appointments.Count;
 
-            int daHoanThanh = lichHens.Count(x =>
+            int daHoanThanh = appointments.Count(x =>
             {
-                var st = (x.TrangThai ?? "").Trim().ToLower();
-                return st == "đã hoàn thành" || st == "hoàn thành" || st == "completed";
+                var st = (x.Status ?? "").Trim().ToLower();
+                return st == "hoàn thành" || st == "đã hoàn thành" || st == "đã thanh toán" || st == "completed";
             });
 
-            int dangChoXuLy = lichHens.Count(x =>
+            int dangChoXuLy = appointments.Count(x =>
             {
-                var st = (x.TrangThai ?? "").Trim().ToLower();
-                return st == "chờ xác nhận" || st == "waiting" || st == "pending"
-                    || st == "chờ bệnh nhân xác nhận" || st.Contains("bệnh nhân xác nhận") || st == "pending_patient"
-                    || st == "reschedule" || st.Contains("đổi lịch") || st.Contains("dời lịch")
-                    || st.Contains("bệnh nhân đã xác nhận lịch khám bù") || st.Contains("đã xác nhận lịch khám bù");
+                var st = (x.Status ?? "").Trim().ToLower();
+                return st == "chờ" || st == "chờ xác nhận" || st == "đã xác nhận" || st == "đã đến"
+                    || st == "chờ đổi lịch" || st.Contains("đổi lịch") || st.Contains("dời lịch")
+                    || st == "waiting" || st == "pending";
             });
 
             int countSang = 0, countChieu = 0, countToi = 0;
-            foreach (var appt in lichHens)
+            foreach (var appt in appointments)
             {
-                var timeStr = appt.KhungGio ?? "08:30";
-                var hourPart = timeStr.Split(':')[0];
+                var timeStr = appt.TimeSlot ?? "08:30-09:00";
+                var hourPart = timeStr.Split('-', ':')[0].Trim();
                 var startHour = int.TryParse(hourPart, out var h) ? h : 8;
 
                 if (startHour < 12) countSang++;

@@ -1,60 +1,58 @@
-using System;
+
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DatLichKhamBenh.Models.Entities
 {
-    [Table("lich_hen")]
-    public class LichHen
+    [Table("Appointment")]
+    public class Appointment
     {
         [Key]
-        [Column("id")]
+        [Column("Id")]
         public int Id { get; set; }
 
-        [Column("benh_nhan_id")]
-        public int BenhNhanId { get; set; }
-        [ForeignKey(nameof(BenhNhanId))]
-        public virtual BenhNhan? BenhNhan { get; set; }
+        [Column("PatientId")]
+        public int PatientId { get; set; }
 
-        [Column("bac_si_id")]
-        public int? BacSiId { get; set; }
-        [ForeignKey(nameof(BacSiId))]
-        public virtual BacSi? BacSiThongTin { get; set; }
+        [ForeignKey(nameof(PatientId))]
+        public virtual Patient? Patient { get; set; }
 
-        [Column("dich_vu_id")]
-        public int DichVuId { get; set; }
+        [Column("DoctorId")]
+        public int DoctorId { get; set; }
 
-        [Column("ngay_kham")]
-        public DateTime NgayKham { get; set; }
+        [ForeignKey(nameof(DoctorId))]
+        public virtual Doctor? Doctor { get; set; }
 
-        [Column("khung_gio")]
-        public string KhungGio { get; set; } = string.Empty;
+        [Column("AppointmentDate", TypeName = "date")]
+        public DateTime AppointmentDate { get; set; }
 
-        [Column("trang_thai")]
-        public string TrangThai { get; set; } = "Chờ xác nhận";
+        [Column("TimeSlot")]
+        [MaxLength(50)]
+        public string TimeSlot { get; set; } = string.Empty;
 
-        [Column("ghi_chu")]
-        public string? GhiChu { get; set; }
+        [Column("Symptoms")]
+        public string? Symptoms { get; set; }
 
-        [Column("created_at")]
-        public DateTime? CreatedAt { get; set; }
+        [Column("Status")]
+        [MaxLength(50)]
+        public string Status { get; set; } = "Chờ";
 
-        [Column("trieu_chung_thuc_the")]
-        public string? TrieuChungThucThe { get; set; }
+        [Column("Notes")]
+        public string? Notes { get; set; }
 
-        [Column("chan_doan")]
-        public string? ChanDoan { get; set; }
+        [Column("ConsultationFee", TypeName = "decimal(18, 2)")]
+        public decimal ConsultationFee { get; set; } = 0m;
 
-        [Column("loi_dan")]
-        public string? LoiDan { get; set; }
+        [Column("MedicineFee", TypeName = "decimal(18, 2)")]
+        public decimal MedicineFee { get; set; } = 0m;
 
-        [Column("don_thuoc")]
-        public string? DonThuoc { get; set; }
-
-        [Column("thiet_bi_y_te")]
-        public string? ThietBiYTe { get; set; }
+        [Column("ServiceFee", TypeName = "decimal(18, 2)")]
+        public decimal ServiceFee { get; set; } = 0m;
 
         [NotMapped]
         public int MaLichHen => Id;
+
+        [NotMapped]
+        public decimal TotalFee => ConsultationFee + MedicineFee + ServiceFee;
     }
 }
