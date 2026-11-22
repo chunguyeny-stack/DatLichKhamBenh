@@ -1,0 +1,332 @@
+﻿@model DatLichKhamBenh.Models.Entities.Doctor
+@{
+    ViewData["Title"] = "Chi tiết Bác sĩ";
+    var tenBs = !string.IsNullOrWhiteSpace(Model.User?.FullName)
+        ? Model.User!.FullName
+        : (Model.User?.Email ?? Model.User?.UserName ?? $"Bác sĩ #{Model.Id}");
+    var tenHienThi = string.IsNullOrWhiteSpace(Model.Degree) ? tenBs : $"{Model.Degree} - {tenBs}";
+    var kinhNghiemText = Model.YearsOfExperience.HasValue ? $"{Model.YearsOfExperience.Value} năm kinh nghiệm" : "Đang cập nhật";
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --pink-main: #DF6688;
+        --pink-dark: #C65172;
+        --pink-soft: #FCEEF2;
+        --pink-banner: #FDF2F5;
+        --ink-dark: #1E2432;
+        --ink-muted: #5A6275;
+        --page-bg: #FAFAFC;
+    }
+
+    .ms-detail-page,
+    .ms-detail-page * {
+        box-sizing: border-box;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        font-family: 'Be Vietnam Pro', sans-serif;
+    }
+
+    .ms-detail-page {
+        background-color: var(--page-bg);
+        color: var(--ink-dark);
+        min-height: 100vh;
+    }
+
+    .ms-topbar {
+        background-color: #FFFFFF;
+        border: none;
+        width: 100%;
+    }
+
+    .ms-topbar-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .ms-topbar-left {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 36px;
+    }
+
+    .ms-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        font-family: 'Nunito', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
+        color: #4A4A4A;
+        border: none;
+    }
+
+    .ms-nav {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 24px;
+    }
+
+    .ms-nav a {
+        text-decoration: none;
+        font-size: 14.5px;
+        font-weight: 600;
+        color: var(--ink-dark);
+        border: none;
+    }
+
+    .ms-nav a.is-active,
+    .ms-nav a:hover {
+        color: var(--pink-main);
+    }
+
+    .ms-topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .ms-user-email {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ink-dark);
+    }
+
+    .ms-btn-pink,
+    .ms-btn-register {
+        background-color: var(--pink-main);
+        color: #FFFFFF;
+        border: none;
+        padding: 8px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ms-btn-pink:hover,
+    .ms-btn-register:hover {
+        background-color: var(--pink-dark);
+        color: #FFFFFF;
+    }
+
+    .ms-btn-login {
+        background-color: #FFFFFF;
+        color: var(--pink-main);
+        border: none;
+        padding: 8px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ms-btn-login:hover {
+        background-color: var(--pink-soft);
+        color: var(--pink-dark);
+    }
+
+    .detail-wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 28px 20px 60px;
+    }
+
+    .detail-banner {
+        background-color: var(--pink-banner);
+        border: none;
+        padding: 22px 28px;
+        margin-bottom: 20px;
+    }
+
+    .detail-page-title {
+        font-family: 'Nunito', sans-serif;
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--ink-dark);
+        margin: 0;
+    }
+
+    .detail-panel {
+        background-color: #FFFFFF;
+        border: none;
+        padding: 28px;
+    }
+
+    .detail-name {
+        font-family: 'Nunito', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--ink-dark);
+        margin: 0 0 18px 0;
+        border: none;
+        word-break: break-word;
+    }
+
+    .detail-row {
+        padding: 10px 0;
+        border: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        font-size: 14.5px;
+    }
+
+    .detail-label {
+        min-width: 150px;
+        color: var(--ink-muted);
+        border: none;
+    }
+
+    .detail-bio-box {
+        background-color: var(--pink-banner);
+        border: none;
+        padding: 16px 20px;
+        margin-top: 14px;
+    }
+
+    .btn-pink-solid {
+        background-color: var(--pink-main);
+        color: #FFFFFF;
+        border: none;
+        padding: 10px 22px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-pink-solid:hover {
+        background-color: var(--pink-dark);
+        color: #FFFFFF;
+    }
+
+    .btn-flat-sec {
+        background-color: var(--pink-soft);
+        color: var(--ink-dark);
+        border: none;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-flat-sec:hover {
+        background-color: var(--pink-banner);
+        color: var(--pink-main);
+    }
+</style>
+
+<div class="ms-detail-page">
+    <header class="ms-topbar">
+        <div class="ms-topbar-inner">
+            <div class="ms-topbar-left">
+                <a asp-controller="Home" asp-action="Index" class="ms-brand" title="Về trang chủ">
+                    <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M30 30H16C11.5817 30 8 26.4183 8 22C8 18.2 10.65 15.02 14.2 14.2C15.02 10.65 18.2 8 22 8C26.4183 8 30 11.5817 30 16V30Z" fill="#D59ECA"/>
+                        <path d="M34 30V16C34 11.5817 37.5817 8 42 8C45.8 8 48.98 10.65 49.8 14.2C53.35 15.02 56 18.2 56 22C56 26.4183 52.4183 30 48 30H34Z" fill="#77B800"/>
+                        <path d="M30 34V48C30 52.4183 26.4183 56 22 56C18.2 56 15.02 53.35 14.2 49.8C10.65 48.98 8 45.8 8 42C8 37.5817 11.5817 34 16 34H30Z" fill="#00A6EB"/>
+                        <path d="M34 34H48C52.4183 34 56 37.5817 56 42C56 45.8 53.35 48.98 49.8 49.8C48.98 53.35 45.8 56 42 56C37.5817 56 34 52.4183 34 48V34Z" fill="#F9EBF2" stroke="#EBC1D3" stroke-width="1.5"/>
+                    </svg>
+                    <span>MediSlot</span>
+                </a>
+
+                <nav class="ms-nav">
+                    <a asp-controller="Home" asp-action="Index">Trang chủ</a>
+                    <a asp-controller="Doctor" asp-action="Index" class="is-active">Tìm kiếm BS</a>
+                    <a asp-controller="Booking" asp-action="Create">Đặt lịch khám</a>
+                    <a asp-controller="Patient" asp-action="Appointments">Lịch sử khám</a>
+                </nav>
+            </div>
+
+            <div class="ms-topbar-right">
+                @if (User.Identity != null && User.Identity.IsAuthenticated)
+                {
+                    <a asp-controller="Account" asp-action="Profile" class="ms-user-email" style="text-decoration: none;">@User.Identity.Name</a>
+                    <form asp-controller="Account" asp-action="Logout" method="post" style="margin: 0;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="ms-btn-pink">Đăng xuất</button>
+                    </form>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="ms-btn-login">Đăng nhập</a>
+                    <a asp-controller="Account" asp-action="Register" class="ms-btn-register">Đăng ký</a>
+                }
+            </div>
+        </div>
+    </header>
+
+    <div class="detail-wrap">
+        <div class="detail-banner">
+            <h2 class="detail-page-title">Chi tiết Bác sĩ</h2>
+        </div>
+
+        <div class="detail-panel">
+            <h3 class="detail-name">@tenHienThi</h3>
+
+            <div class="detail-row">
+                <span class="detail-label">Chuyên khoa</span>
+                <strong>@(Model.Specialty?.Name ?? "Chưa phân khoa")</strong>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-label">Kinh nghiệm</span>
+                <strong>@kinhNghiemText</strong>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-label">Nơi công tác</span>
+                <strong>@(string.IsNullOrWhiteSpace(Model.Workplace) ? "Đang cập nhật" : Model.Workplace)</strong>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-label">Giá khám gốc</span>
+                <strong style="color: var(--pink-main);">200,000 đ</strong>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Bio))
+            {
+                <div class="detail-bio-box">
+                    <div class="detail-label mb-1">Giới thiệu</div>
+                    <p class="mb-0" style="font-size: 14px;">@Model.Bio</p>
+                </div>
+            }
+
+            <div class="detail-bio-box">
+                <div class="detail-label mb-1">Liên hệ &amp; Thông tin</div>
+                <p class="mb-0" style="font-size: 14px;">
+                    Email: @(Model.User?.Email ?? "Đang cập nhật") —
+                    Điện thoại: @(Model.User?.PhoneNumber ?? "Đang cập nhật")
+                </p>
+            </div>
+
+            
+            <div class="mt-4 d-flex gap-2 flex-wrap">
+                <a asp-controller="Booking" asp-action="Create" asp-route-doctorId="@Model.Id" class="btn-pink-solid">Đặt lịch ngay</a>
+                <a asp-action="Index" class="btn-flat-sec">Quay lại danh sách</a>
+                <a asp-controller="Home" asp-action="Index" class="btn-flat-sec">← Về Trang chủ</a>
+            </div>
+        </div>
+    </div>
+</div>

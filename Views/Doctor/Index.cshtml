@@ -1,0 +1,387 @@
+﻿@model IEnumerable<DatLichKhamBenh.Models.Entities.Doctor>
+@{
+    ViewData["Title"] = "Tìm kiếm Bác sĩ";
+    var specialties = ViewBag.Specialties as IEnumerable<DatLichKhamBenh.Models.Entities.Specialty>
+                      ?? Enumerable.Empty<DatLichKhamBenh.Models.Entities.Specialty>();
+    int? selectedSpecialty = ViewBag.SpecialtyId as int?;
+    var doctors = Model ?? Enumerable.Empty<DatLichKhamBenh.Models.Entities.Doctor>();
+}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --pink-main: #DF6688;
+        --pink-dark: #C65172;
+        --pink-soft: #FCEEF2;
+        --pink-banner: #FDF2F5;
+        --ink-dark: #1E2432;
+        --ink-muted: #5A6275;
+        --page-bg: #FAFAFC;
+    }
+
+    .ms-page-wrap,
+    .ms-page-wrap * {
+        box-sizing: border-box;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        font-family: 'Be Vietnam Pro', sans-serif;
+    }
+
+    .ms-page-wrap {
+        background-color: var(--page-bg);
+        color: var(--ink-dark);
+        min-height: 100vh;
+    }
+
+    .ms-topbar {
+        background-color: #FFFFFF;
+        border: none;
+        width: 100%;
+    }
+
+    .ms-topbar-inner {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .ms-topbar-left {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 36px;
+    }
+
+    .ms-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+        font-family: 'Nunito', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
+        color: #4A4A4A;
+        border: none;
+    }
+
+    .ms-nav {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 24px;
+    }
+
+    .ms-nav a {
+        text-decoration: none;
+        font-size: 14.5px;
+        font-weight: 600;
+        color: var(--ink-dark);
+        border: none;
+    }
+
+    .ms-nav a.is-active,
+    .ms-nav a:hover {
+        color: var(--pink-main);
+    }
+
+    .ms-topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .ms-user-email {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--ink-dark);
+    }
+
+    .ms-btn-pink,
+    .ms-btn-register {
+        background-color: var(--pink-main);
+        color: #FFFFFF;
+        border: none;
+        padding: 8px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ms-btn-pink:hover,
+    .ms-btn-register:hover {
+        background-color: var(--pink-dark);
+        color: #FFFFFF;
+    }
+
+    .ms-btn-login {
+        background-color: #FFFFFF;
+        color: var(--pink-main);
+        border: none;
+        padding: 8px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ms-btn-login:hover {
+        background-color: var(--pink-soft);
+        color: var(--pink-dark);
+    }
+
+    .doc-search-wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 28px 20px 60px;
+    }
+
+    .doc-top-banner {
+        background-color: var(--pink-banner);
+        border: none;
+        padding: 24px 28px;
+        margin-bottom: 20px;
+    }
+
+    .doc-page-title {
+        font-family: 'Nunito', sans-serif;
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--ink-dark);
+        margin: 0;
+    }
+
+    .doc-filter-card {
+        background-color: var(--pink-banner);
+        border: none;
+        padding: 24px 28px;
+        margin-bottom: 24px;
+    }
+
+    .doc-filter-card .form-label {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--ink-dark);
+        margin-bottom: 6px;
+    }
+
+    .doc-filter-card .form-control,
+    .doc-filter-card .form-select {
+        border: none;
+        padding: 10px 12px;
+        font-size: 14px;
+        color: var(--ink-dark);
+        background-color: #FFFFFF;
+    }
+
+    .btn-filter-pink {
+        background-color: var(--pink-main);
+        color: #FFFFFF;
+        border: none;
+        padding: 10px 18px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .btn-filter-pink:hover {
+        background-color: var(--pink-dark);
+        color: #FFFFFF;
+    }
+
+    .doc-item-card {
+        background-color: var(--pink-banner);
+        border: none;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .doc-item-body {
+        padding: 20px 22px;
+    }
+
+    .doc-item-title {
+        font-family: 'Nunito', sans-serif;
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--ink-dark);
+        margin: 0 0 12px 0;
+        border: none;
+        word-break: break-word;
+    }
+
+    .doc-item-meta {
+        font-size: 13.5px;
+        color: var(--ink-muted);
+        margin-bottom: 6px;
+    }
+
+    .doc-item-meta strong {
+        color: var(--ink-dark);
+    }
+
+    .doc-item-footer {
+        background-color: var(--pink-soft);
+        border: none;
+        padding: 12px 22px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-doc-detail {
+        flex: 1;
+        text-align: center;
+        background-color: #FFFFFF;
+        color: var(--ink-dark);
+        border: none;
+        padding: 8px 10px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .btn-doc-detail:hover {
+        background-color: var(--pink-banner);
+        color: var(--pink-main);
+    }
+
+    .btn-doc-book {
+        flex: 1;
+        text-align: center;
+        background-color: var(--pink-main);
+        color: #FFFFFF;
+        border: none;
+        padding: 8px 10px;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .btn-doc-book:hover {
+        background-color: var(--pink-dark);
+        color: #FFFFFF;
+    }
+
+    .doc-empty-alert {
+        background-color: var(--pink-banner);
+        border: none;
+        padding: 20px 24px;
+        color: var(--ink-dark);
+    }
+</style>
+
+<div class="ms-page-wrap">
+    <header class="ms-topbar">
+        <div class="ms-topbar-inner">
+            <div class="ms-topbar-left">
+                <a asp-controller="Home" asp-action="Index" class="ms-brand" title="Về trang chủ">
+                    <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M30 30H16C11.5817 30 8 26.4183 8 22C8 18.2 10.65 15.02 14.2 14.2C15.02 10.65 18.2 8 22 8C26.4183 8 30 11.5817 30 16V30Z" fill="#D59ECA"/>
+                        <path d="M34 30V16C34 11.5817 37.5817 8 42 8C45.8 8 48.98 10.65 49.8 14.2C53.35 15.02 56 18.2 56 22C56 26.4183 52.4183 30 48 30H34Z" fill="#77B800"/>
+                        <path d="M30 34V48C30 52.4183 26.4183 56 22 56C18.2 56 15.02 53.35 14.2 49.8C10.65 48.98 8 45.8 8 42C8 37.5817 11.5817 34 16 34H30Z" fill="#00A6EB"/>
+                        <path d="M34 34H48C52.4183 34 56 37.5817 56 42C56 45.8 53.35 48.98 49.8 49.8C48.98 53.35 45.8 56 42 56C37.5817 56 34 52.4183 34 48V34Z" fill="#F9EBF2" stroke="#EBC1D3" stroke-width="1.5"/>
+                    </svg>
+                    <span>MediSlot</span>
+                </a>
+
+                <nav class="ms-nav">
+                    <a asp-controller="Home" asp-action="Index">Trang chủ</a>
+                    <a asp-controller="Doctor" asp-action="Index" class="is-active">Tìm kiếm BS</a>
+                    <a asp-controller="Booking" asp-action="Create">Đặt lịch khám</a>
+                    <a asp-controller="Patient" asp-action="Appointments">Lịch sử khám</a>
+                </nav>
+            </div>
+
+            <div class="ms-topbar-right">
+                @if (User.Identity != null && User.Identity.IsAuthenticated)
+                {
+                    <a asp-controller="Account" asp-action="Profile" class="ms-user-email" style="text-decoration: none;">@User.Identity.Name</a>
+                    <form asp-controller="Account" asp-action="Logout" method="post" style="margin: 0;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="ms-btn-pink">Đăng xuất</button>
+                    </form>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="ms-btn-login">Đăng nhập</a>
+                    <a asp-controller="Account" asp-action="Register" class="ms-btn-register">Đăng ký</a>
+                }
+            </div>
+        </div>
+    </header>
+
+    <div class="doc-search-wrap">
+        <div class="doc-top-banner">
+            <h2 class="doc-page-title">Tìm kiếm Bác sĩ</h2>
+        </div>
+
+        <form asp-action="Index" method="get" class="row g-3 doc-filter-card">
+            <div class="col-md-5">
+                <label class="form-label">Tên bác sĩ / Học vị</label>
+                <input type="text" name="tenBacSi" value="@ViewBag.TenBacSi" class="form-control" placeholder="Nhập tên hoặc học vị bác sĩ..."/>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Chuyên khoa</label>
+                <select name="specialtyId" class="form-select">
+                    <option value="">-- Tất cả chuyên khoa --</option>
+                    @foreach (var item in specialties)
+                    {
+                        <option value="@item.Id" selected="@(selectedSpecialty == item.Id)">@item.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn-filter-pink">Lọc</button>
+            </div>
+        </form>
+
+        @if (!doctors.Any())
+        {
+            <div class="doc-empty-alert">Không tìm thấy bác sĩ phù hợp.</div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var doc in doctors)
+                {
+                    var tenBs = !string.IsNullOrWhiteSpace(doc.User?.FullName)
+                        ? doc.User!.FullName
+                        : (doc.User?.Email ?? doc.User?.UserName ?? $"Bác sĩ #{doc.Id}");
+                    var tenHienThi = string.IsNullOrWhiteSpace(doc.Degree) ? tenBs : $"{doc.Degree} - {tenBs}";
+                    var kinhNghiemText = doc.YearsOfExperience.HasValue ? $"{doc.YearsOfExperience.Value} năm" : "Đang cập nhật";
+
+                    
+                    <div class="col-md-4">
+                        <div class="doc-item-card">
+                            <div class="doc-item-body">
+                                <h5 class="doc-item-title">@tenHienThi</h5>
+                                <p class="doc-item-meta">Chuyên khoa: <strong>@(doc.Specialty?.Name ?? "Chưa phân khoa")</strong></p>
+                                <p class="doc-item-meta">Kinh nghiệm: <strong>@kinhNghiemText</strong></p>
+                                <p class="doc-item-meta mb-0">Giá khám: <strong>200,000 đ</strong></p>
+                            </div>
+                            <div class="doc-item-footer">
+                                <a asp-action="Details" asp-route-id="@doc.Id" class="btn-doc-detail">Xem chi tiết BS</a>
+                                <a asp-controller="Booking" asp-action="Create" asp-route-doctorId="@doc.Id" class="btn-doc-book">Đặt lịch ngay</a>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
