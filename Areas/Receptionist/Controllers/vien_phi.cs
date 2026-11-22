@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DatLichKhamBenh.Data.Context;
@@ -13,7 +14,7 @@ using DatLichKhamBenh.Models.Entities;
 namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 {
     [Area("Receptionist")]
-    //[Authorize(Roles = "Receptionist,LeTan")]
+    [Authorize(Roles = "Receptionist")]
     public class vien_phi : Controller
     {
         private readonly ApplicationDbContext _context;

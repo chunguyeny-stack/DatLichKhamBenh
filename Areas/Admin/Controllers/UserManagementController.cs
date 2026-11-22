@@ -69,6 +69,8 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateStaff(CreateStaffViewModel model)
         {
+            model.Email = model.Email?.Trim() ?? string.Empty;
+
             if (!ModelState.IsValid)
             {
                 ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
@@ -255,32 +257,42 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return NotFound();
 
-            var defaultPassword = GenerateTemporaryPassword();
+            var defaultPassword = _configuration["Seed:StaffPassword"];
+            if (string.IsNullOrWhiteSpace(defaultPassword))
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Chưa cấu hình Seed:StaffPassword. Hãy đặt mật khẩu mặc định qua User Secrets hoặc biến môi trường.");
+                ViewBag.Email = user.Email;
+                ViewBag.UserId = user.Id;
+                ViewBag.FullName = $"{user.MiddleName} {user.FirstName}".Trim();
+                return View();
+            }
 
-            // 1. Tạo token và reset mật khẩu
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var result = await _userManager.ResetPasswordAsync(user, token, defaultPassword);
 
             if (result.Succeeded)
             {
-                // 2. 🔥 BẬT CỜ BẮT BUỘC ĐỔI MẬT KHẨU 🔥
                 user.MustChangePassword = true;
-
-                // 3. Mở khóa tài khoản (nếu đang bị khóa) để họ có thể đăng nhập lại
-                await _userManager.SetLockoutEndDateAsync(user, null);
-                user.LockoutReason = null;
-
-                await _userManager.UpdateAsync(user);
                 await _userManager.UpdateSecurityStampAsync(user);
                 await _authService.LogActionAsync(
                     _userManager.GetUserId(User)!, "ResetPassword", user.Id,
                     "Admin đặt lại mật khẩu tạm thời");
-                await _emailService.SendAsync(
+                var emailSent = await _emailService.SendAsync(
                     user.Email!,
                     "Mật khẩu MediSlot đã được đặt lại",
-                    $"<p>Mật khẩu tạm thời mới: <strong>{defaultPassword}</strong></p><p>Bạn phải đổi mật khẩu ở lần đăng nhập tiếp theo.</p>");
+                    $"<p>Mật khẩu mặc định mới: <strong>{HtmlEncoder.Default.Encode(defaultPassword)}</strong></p><p>Bạn phải đổi mật khẩu ở lần đăng nhập tiếp theo.</p>");
 
-                TempData["SuccessMessage"] = $"Đã reset mật khẩu cho tài khoản {user.Email}. Mật khẩu tạm thời đã được gửi qua email.";
+                if (emailSent)
+                {
+                    TempData["SuccessMessage"] = $"Đã reset mật khẩu cho tài khoản {user.Email}. Mật khẩu tạm thời đã được gửi qua email.";
+                }
+                else
+                {
+                    _logger.LogWarning("Không gửi được email mật khẩu tạm thời tới {Email}.", user.Email);
+                    TempData["WarningMessage"] =
+                        $"Đã reset mật khẩu cho tài khoản {user.Email}, nhưng không gửi được email. Vui lòng kiểm tra cấu hình SMTP.";
+                }
             }
             else
             {
@@ -297,12 +309,5 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private static string GenerateTemporaryPassword()
-        {
-            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
-            return "Med!" + new string(Enumerable.Range(0, 12)
-                .Select(_ => chars[Random.Shared.Next(chars.Length)])
-                .ToArray());
-        }
     }
 }

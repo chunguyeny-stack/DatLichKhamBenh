@@ -58,8 +58,15 @@ public class AccountController : Controller
         var result = await _authService.LoginAsync(model);
         if (result.Success)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user != null && user.MustChangePassword)
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                _logger.LogError("Đăng nhập thành công nhưng không tìm thấy tài khoản {Email}.", model.Email);
+                ModelState.AddModelError("", "Không thể tải thông tin tài khoản sau khi đăng nhập.");
+                return View(model);
+            }
+
+            if (user.MustChangePassword)
                 return RedirectToAction(nameof(ChangePassword));
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return LocalRedirect(returnUrl);
@@ -94,7 +101,7 @@ public class AccountController : Controller
             Email = user.Email ?? string.Empty,
             PhoneNumber = user.PhoneNumber,
             DateOfBirth = user.DateOfBirth,
-            RoleName = roles.FirstOrDefault() ?? string.Empty
+            RoleName = GetLocalizedRoleName(roles.FirstOrDefault() ?? string.Empty)
         };
 
         return View(model);
@@ -109,7 +116,7 @@ public class AccountController : Controller
 
         model.Email = user.Email ?? string.Empty;
         var roles = await _userManager.GetRolesAsync(user);
-        model.RoleName = roles.FirstOrDefault() ?? string.Empty;
+        model.RoleName = GetLocalizedRoleName(roles.FirstOrDefault() ?? string.Empty);
 
         if (!ModelState.IsValid)
             return View("Profile", model);
@@ -198,7 +205,7 @@ public class AccountController : Controller
         }
 
         TempData["Success"] = "Đổi mật khẩu thành công.";
-        return RedirectToAction("Index", "Home");
+        return await RedirectToRoleDashboardAsync(user);
     }
 
     [AllowAnonymous]
@@ -247,15 +254,17 @@ public class AccountController : Controller
                     "Account",
                     new { userId = user.Id, token },
                     Request.Scheme);
-                await HttpContext.RequestServices
+                var emailSent = await HttpContext.RequestServices
                     .GetRequiredService<DatLichKhamBenh.Services.Interfaces.IEmailService>()
                     .SendAsync(email, "Đặt lại mật khẩu MediSlot",
-                        $"<p>Nhấn <a href=\"{callbackUrl}\">vào đây</a> để đặt lại mật khẩu.</p>");
+                        $"<p>Xin chào,</p><p>Bạn đã yêu cầu đặt lại mật khẩu MediSlot. Nhấn <a href=\"{callbackUrl}\">vào đây</a> để tạo mật khẩu mới.</p><p>Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>");
+                if (!emailSent)
+                    _logger.LogWarning("Không gửi được email đặt lại mật khẩu tới {Email}.", email);
             }
         }
 
         TempData["SuccessMessage"] =
-            "Nếu email tồn tại, liên kết đặt lại mật khẩu đã được gửi.";
+            "Nếu địa chỉ email đã đăng ký, hướng dẫn đặt lại mật khẩu sẽ được gửi đến hộp thư. Vui lòng kiểm tra cả thư rác.";
         return RedirectToAction(nameof(ForgotPassword));
     }
 
@@ -391,7 +400,8 @@ public class AccountController : Controller
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
             var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-            var emailVerified = info.Principal.FindFirstValue("email_verified");
+            var emailVerified = info.Principal.FindFirstValue("email_verified")
+                ?? info.Principal.FindFirstValue("urn:google:email_verified");
             if (string.IsNullOrWhiteSpace(email)
                 || !bool.TryParse(emailVerified, out var isEmailVerified)
                 || !isEmailVerified)
@@ -547,8 +557,17 @@ public class AccountController : Controller
         if (roles.Contains("Doctor"))
             return RedirectToAction("Index", "Doctor", new { area = "Doctor" });
         if (roles.Contains("Receptionist"))
-            return RedirectToAction("Index", "Receptionist", new { area = "Receptionist" });
+            return RedirectToAction("Index", "dashboard_le_tan", new { area = "Receptionist" });
 
         return RedirectToAction("Index", "Home");
     }
+
+    private static string GetLocalizedRoleName(string roleName) => roleName switch
+    {
+        "Patient" => "Bệnh nhân",
+        "Doctor" => "Bác sĩ",
+        "Receptionist" => "Lễ tân",
+        "Admin" => "Quản trị viên",
+        _ => roleName
+    };
 }

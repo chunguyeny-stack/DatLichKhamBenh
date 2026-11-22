@@ -1,3 +1,6 @@
+@{
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -5,19 +8,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(ViewData["Title"] ?? "Quản trị") - MediSlot</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="~/css/account.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
 </head>
-<body>
-    <nav class="navbar navbar-dark bg-primary px-3">
-        <a class="navbar-brand" asp-area="Admin" asp-controller="UserManagement" asp-action="Index">MediSlot - Quản trị</a>
-        <div class="d-flex align-items-center gap-3">
-            <a class="text-white text-decoration-none" asp-area="Admin" asp-controller="UserManagement" asp-action="Index">Quản lý người dùng</a>
-            <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+<body class="account-profile-page admin-layout">
+    <nav class="top-navbar">
+        <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+            <img src="~/images/logo.png" alt="Biểu trưng MediSlot" />
+            <span>MediSlot</span>
+            <span class="admin-brand-label">Quản trị</span>
+        </a>
+
+        <ul class="navbar-menu">
+            <li>
+                <a asp-area="Admin" asp-controller="UserManagement" asp-action="Index"
+                   class="@(currentAction == "CreateStaff" ? "" : "active")">
+                    Quản lý người dùng
+                </a>
+            </li>
+            <li>
+                <a asp-area="Admin" asp-controller="UserManagement" asp-action="CreateStaff"
+                   class="@(currentAction == "CreateStaff" ? "active" : "")">
+                    Tạo tài khoản
+                </a>
+            </li>
+            <li>
+                <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="m-0">
                 @Html.AntiForgeryToken()
-                <button class="btn btn-light btn-sm" type="submit">Đăng xuất</button>
-            </form>
-        </div>
+                    <button class="nav-logout-btn text-danger" type="submit">
+                        Đăng xuất
+                    </button>
+                </form>
+            </li>
+        </ul>
     </nav>
-    <main class="container py-4">
+    <main class="main-content">
         @RenderBody()
     </main>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

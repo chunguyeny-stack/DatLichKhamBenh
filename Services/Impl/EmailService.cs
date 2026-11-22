@@ -1,39 +1,30 @@
 using System.Net;
 using System.Net.Mail;
+using DatLichKhamBenh.Configuration;
 using DatLichKhamBenh.Services.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace DatLichKhamBenh.Services.Impl
 {
     public class EmailService : IEmailService
     {
-        private readonly IConfiguration _configuration;
+        private readonly MediSettings _settings;
         private readonly ILogger<EmailService> _logger;
 
-        public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+        public EmailService(IOptions<MediSettings> settings, ILogger<EmailService> logger)
         {
-            _configuration = configuration;
+            _settings = settings.Value;
             _logger = logger;
         }
 
         public async Task<bool> SendAsync(string toEmail, string subject, string body)
         {
-            var host = _configuration["Email:SmtpHost"];
-            var portText = _configuration["Email:SmtpPort"];
-            var username = _configuration["Email:Username"];
-            var password = _configuration["Email:Password"];
-            var from = _configuration["Email:From"] ?? username;
-
-            if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(portText)
-                || string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password)
-                || string.IsNullOrWhiteSpace(from))
+            if (string.IsNullOrWhiteSpace(_settings.Host)
+                || _settings.Port <= 0
+                || string.IsNullOrWhiteSpace(_settings.SenderEmail)
+                || string.IsNullOrWhiteSpace(_settings.Password))
             {
                 _logger.LogWarning("SMTP chưa được cấu hình. Không gửi email tới {Email}.", toEmail);
-                return false;
-            }
-
-            if (!int.TryParse(portText, out var port))
-            {
-                _logger.LogError("Email:SmtpPort không hợp lệ.");
                 return false;
             }
 
@@ -41,17 +32,17 @@ namespace DatLichKhamBenh.Services.Impl
             {
                 using var message = new MailMessage
                 {
-                    From = new MailAddress(from),
+                    From = new MailAddress(_settings.SenderEmail, _settings.SenderName),
                     Subject = subject,
                     Body = body,
                     IsBodyHtml = true
                 };
                 message.To.Add(toEmail);
 
-                using var client = new SmtpClient(host, port)
+                using var client = new SmtpClient(_settings.Host, _settings.Port)
                 {
-                    EnableSsl = true,
-                    Credentials = new NetworkCredential(username, password)
+                    EnableSsl = _settings.EnableSsl,
+                    Credentials = new NetworkCredential(_settings.SenderEmail, _settings.Password)
                 };
 
                 await client.SendMailAsync(message);

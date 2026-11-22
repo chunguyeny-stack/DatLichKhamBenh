@@ -136,7 +136,7 @@
     {
     <nav class="top-navbar">
         <a class="navbar-brand" asp-controller="Home" asp-action="Index">
-            <img src="~/images/logo.png" alt="Logo" />
+            <img src="~/images/logo.png" alt="Biểu trưng MediSlot" />
             MediSlot
         </a>
 
@@ -167,11 +167,15 @@
     </nav>
 
     <div class="main-content">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success" role="alert">@TempData["Success"]</div>
+        }
         <h1 class="page-title">Thông tin cá nhân</h1>
 
         <div class="header-info">
             <div class="avatar-large">
-                @(!string.IsNullOrEmpty(Model.FirstName) ? Model.FirstName[..1].ToUpper() : "U")
+                @(!string.IsNullOrEmpty(Model.FirstName) ? Model.FirstName[..1].ToUpper() : "?")
                 <div class="edit-avatar-icon" title="Thay đổi ảnh">
                     <i class="bi bi-pencil" style="color: #1b1b1b; font-size: 0.9rem;"></i>
                 </div>
@@ -189,9 +193,9 @@
                 <i class="bi bi-chevron-up"></i>
             </div>
             <div class="card-body">
-                <p class="helper-text">Để cập nhật tên và chức danh của bạn, vui lòng liên hệ với Admin. Bạn có thể tự cập nhật số điện thoại và thông tin bên dưới.</p>
+                <p class="helper-text">Để cập nhật tên và chức danh, vui lòng liên hệ quản trị viên. Bạn có thể tự cập nhật số điện thoại và thông tin bên dưới.</p>
 
-                <form asp-action="UpdateProfile" method="post">
+                <form asp-controller="Account" asp-action="UpdateProfile" method="post">
                     <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
                     <div class="info-row">
@@ -209,7 +213,7 @@
                         </div>
                     </div>
                     <div class="info-row">
-                        <div class="info-label">Email (Không thể sửa)</div>
+                        <div class="info-label">Địa chỉ email (không thể chỉnh sửa)</div>
                         <div class="info-value"><input asp-for="Email" class="form-control form-control-sm" style="max-width: 350px;" disabled /></div>
                     </div>
                     <div class="info-row">

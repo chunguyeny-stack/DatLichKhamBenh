@@ -1,16 +1,20 @@
+@using System.Linq
 @model IEnumerable<DatLichKhamBenh.Models.Entities.ApplicationUser>
 @{
     ViewData["Title"] = "Quản lý người dùng";
     var userRoles = ViewBag.UserRoles as Dictionary<string, string>;
+    var users = Model.ToList();
 }
 
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>@ViewData["Title"]</h2>
-        <a asp-action="CreateStaff" class="btn btn-primary">
-            <i class="bi bi-person-plus"></i> Tạo tài khoản nhân sự
-        </a>
-    </div>
+<section class="admin-user-management">
+    <header class="admin-page-header">
+        <div>
+            <span class="admin-page-kicker">Khu vực quản trị</span>
+            <h1 class="admin-page-title">@ViewData["Title"]</h1>
+            <p class="admin-page-description">Theo dõi và quản lý tài khoản người dùng MediSlot.</p>
+        </div>
+        <a asp-action="CreateStaff" class="admin-create-button">Tạo tài khoản nhân sự</a>
+    </header>
 
     @if (TempData["SuccessMessage"] != null)
     {
@@ -27,10 +31,17 @@
         </div>
     }
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <table class="table table-hover table-striped mb-0">
-                <thead class="table-light">
+    <div class="admin-panel">
+        <div class="admin-panel-header">
+            <div>
+                <h2>Danh sách tài khoản</h2>
+                <p>Thông tin vai trò, trạng thái và thao tác quản trị.</p>
+            </div>
+            <span class="admin-user-count">@users.Count tài khoản</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover admin-user-table">
+                <thead>
                     <tr>
                         <th>Email</th>
                         <th>Họ tên</th>
@@ -40,55 +51,55 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var user in Model)
+                    @if (users.Count == 0)
                     {
-                        var role = userRoles != null && userRoles.ContainsKey(user.Id) ? userRoles[user.Id] : "N/A";
-                        var isLocked = user.LockoutEnd != null && user.LockoutEnd > DateTimeOffset.Now;
-                        var statusText = isLocked ? "Bị khóa" : "Hoạt động";
-                        var statusBadge = isLocked ? "bg-danger" : "bg-success";
-                        var fullName = $"{user.MiddleName} {user.FirstName}".Trim();
-
                         <tr>
-                            <td>@user.Email</td>
-                            <td>@fullName</td>
-                            <td><span class="badge bg-info text-dark">@role</span></td>
-                            <td>
-                                <span class="badge @statusBadge">@statusText</span>
-                                @if (isLocked && !string.IsNullOrEmpty(user.LockoutReason))
-                                {
-                                    <br /><small class="text-muted">Lý do: @user.LockoutReason</small>
-                                }
-                            </td>
-                            <td class="text-end">
-                                <!-- Nút Reset Mật Khẩu -->
-                                <a asp-action="ResetPassword" asp-route-id="@user.Id" class="btn btn-sm btn-outline-warning" title="Reset mật khẩu">
-                                    <i class="bi bi-key"></i> Reset MK
-                                </a>
-
-                                <!-- Nút Khóa / Mở khóa -->
-                                @if (isLocked)
-                                {
-                                    <form asp-action="UnlockUser" asp-route-userId="@user.Id" method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Mở khóa">
-                                            <i class="bi bi-unlock"></i> Mở khóa
-                                        </button>
-                                    </form>
-                                }
-                                else
-                                {
-                                    <a asp-action="LockUser" asp-route-id="@user.Id" class="btn btn-sm btn-outline-danger" title="Khóa tài khoản">
-                                        <i class="bi bi-lock"></i> Khóa
-                                    </a>
-                                }
-                            </td>
+                            <td colspan="5" class="py-5 text-center text-muted">Chưa có tài khoản nào.</td>
                         </tr>
+                    }
+                    else
+                    {
+                        @foreach (var user in users)
+                        {
+                            var role = userRoles != null && userRoles.ContainsKey(user.Id) ? userRoles[user.Id] : "N/A";
+                            var isLocked = user.LockoutEnd != null && user.LockoutEnd > DateTimeOffset.Now;
+                            var statusText = isLocked ? "Bị khóa" : "Hoạt động";
+                            var statusBadge = isLocked ? "admin-status-locked" : "admin-status-active";
+                            var fullName = $"{user.MiddleName} {user.FirstName}".Trim();
+
+                            <tr>
+                                <td>@user.Email</td>
+                                <td>@fullName</td>
+                                <td><span class="admin-role-badge">@role</span></td>
+                                <td>
+                                    <span class="badge @statusBadge">@statusText</span>
+                                    @if (isLocked && !string.IsNullOrEmpty(user.LockoutReason))
+                                    {
+                                        <br /><small class="text-muted">Lý do: @user.LockoutReason</small>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="admin-table-actions">
+                                        <a asp-action="ResetPassword" asp-route-id="@user.Id"
+                                           class="admin-action-button admin-action-reset" title="Reset mật khẩu">Reset MK</a>
+                                        @if (isLocked)
+                                        {
+                                            <form asp-action="UnlockUser" asp-route-userId="@user.Id" method="post" class="m-0">
+                                                <button type="submit" class="admin-action-button admin-action-unlock" title="Mở khóa">Mở khóa</button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <a asp-action="LockUser" asp-route-id="@user.Id"
+                                               class="admin-action-button admin-action-lock" title="Khóa tài khoản">Khóa</a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>
         </div>
     </div>
-</div>
-
-@section Scripts {
-    <!-- Nếu bạn dùng Bootstrap Icons, hãy đảm bảo đã include thư viện này trong _Layout.cshtml -->
-}
+</section>

@@ -7,6 +7,7 @@ namespace DatLichKhamBenh.Models.ViewModels
     public class CreateStaffViewModel : IValidatableObject
     {
         public static readonly string[] AllowedRoles = { "Doctor", "Receptionist", "Admin" };
+        public const string StaffEmailDomain = "medislot.com";
 
         [Required(ErrorMessage = "Vui lòng nhập họ đệm")]
         [StringLength(50, ErrorMessage = "Họ đệm không được vượt quá 50 ký tự")]
@@ -33,6 +34,14 @@ namespace DatLichKhamBenh.Models.ViewModels
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
+            var email = Email?.Trim() ?? string.Empty;
+            if (!email.EndsWith($"@{StaffEmailDomain}", StringComparison.OrdinalIgnoreCase))
+            {
+                yield return new ValidationResult(
+                    $"Email nhân sự phải sử dụng miền @{StaffEmailDomain}.",
+                    new[] { nameof(Email) });
+            }
+
             if (!AllowedRoles.Contains(Role))
             {
                 yield return new ValidationResult(

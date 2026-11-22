@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ using DatLichKhamBenh.Models.Entities;
 namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 {
     [Area("Receptionist")]
-    //[Authorize(Roles = "Receptionist,LeTan")]
+    [Authorize(Roles = "Receptionist")]
     public class ho_so_ca_nhan_le_tan : Controller
     {
         private readonly ApplicationDbContext _context;

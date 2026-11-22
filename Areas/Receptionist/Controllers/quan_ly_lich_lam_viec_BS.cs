@@ -4,6 +4,7 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,7 @@ using DatLichKhamBenh.Models.Enums;
 namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 {
     [Area("Receptionist")]
+    [Authorize(Roles = "Receptionist")]
     public class quan_ly_lich_lam_viec_BS : Controller
     {
         private readonly ApplicationDbContext _context;

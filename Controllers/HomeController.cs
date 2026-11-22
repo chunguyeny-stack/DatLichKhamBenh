@@ -28,7 +28,7 @@ namespace DatLichKhamBenh.Controllers
                 if (User.IsInRole("Doctor"))
                     return RedirectToAction("Index", "Doctor", new { area = "Doctor" });
                 if (User.IsInRole("Receptionist"))
-                    return RedirectToAction("Index", "Receptionist", new { area = "Receptionist" });
+                    return RedirectToAction("Index", "dashboard_le_tan", new { area = "Receptionist" });
             }
 
             // Chưa đăng nhập → hiển thị trang chủ giới thiệu

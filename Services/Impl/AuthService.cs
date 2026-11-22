@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Models.ViewModels;
@@ -33,7 +34,7 @@ namespace DatLichKhamBenh.Services.Impl
 
             // Check khóa tài khoản
             if (await _userManager.IsLockedOutAsync(user))
-                return (false, "Tài khoản đã bị khóa. Vui lòng liên hệ Admin.");
+                return (false, "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
 
             var result = await _signInManager.PasswordSignInAsync(
                 user, model.Password, model.RememberMe, lockoutOnFailure: true);
@@ -105,9 +106,11 @@ namespace DatLichKhamBenh.Services.Impl
             });
             await _context.SaveChangesAsync();
 
-            await SendEmailOtpAsync(user);
+            var emailSent = await SendEmailOtpAsync(user);
             await LogActionAsync(user.Id, "Register", user.Id, "Đăng ký tài khoản bệnh nhân");
-            return (true, "Đăng ký thành công. Vui lòng nhập mã OTP đã gửi đến email.");
+            return emailSent
+                ? (true, "Đăng ký thành công. Vui lòng nhập mã OTP đã gửi đến email.")
+                : (true, "Tài khoản đã được tạo nhưng chưa gửi được OTP. Vui lòng cấu hình email hoặc chọn Gửi lại OTP.");
         }
 
         public async Task<(bool Success, string Message)> VerifyEmailOtpAsync(string email, string otp)
@@ -145,18 +148,20 @@ namespace DatLichKhamBenh.Services.Impl
             if (user.EmailConfirmed)
                 return (false, "Tài khoản đã được xác thực.");
 
-            await SendEmailOtpAsync(user);
+            if (!await SendEmailOtpAsync(user))
+                return (false, "Chưa gửi được OTP. Vui lòng kiểm tra cấu hình email và thử lại.");
+
             await LogActionAsync(user.Id, "ResendOtp", user.Id, "Yêu cầu gửi lại OTP");
             return (true, "Mã OTP mới đã được gửi.");
         }
 
-        private async Task SendEmailOtpAsync(ApplicationUser user)
+        private async Task<bool> SendEmailOtpAsync(ApplicationUser user)
         {
             await _context.EmailVerificationTokens
                 .Where(t => t.UserId == user.Id && !t.IsUsed)
                 .ExecuteUpdateAsync(t => t.SetProperty(x => x.IsUsed, true));
 
-            var otp = Random.Shared.Next(100000, 999999).ToString();
+            var otp = RandomNumberGenerator.GetInt32(100000, 1_000_000).ToString();
             _context.EmailVerificationTokens.Add(new EmailVerificationToken
             {
                 UserId = user.Id,
@@ -166,7 +171,7 @@ namespace DatLichKhamBenh.Services.Impl
             });
             await _context.SaveChangesAsync();
 
-            await _emailService.SendAsync(
+            return await _emailService.SendAsync(
                 user.Email!,
                 "Mã xác thực tài khoản MediSlot",
                 $"<p>Mã OTP của bạn là <strong>{otp}</strong>.</p><p>Mã có hiệu lực trong 5 phút.</p>");
@@ -178,17 +183,39 @@ namespace DatLichKhamBenh.Services.Impl
             if (user == null) return (false, "Không tìm thấy tài khoản.");
             if (user.Id == adminId) return (false, "Không thể tự khóa tài khoản của mình.");
 
-            // Cơ chế khóa duy nhất: LockoutEnd
-            await _userManager.SetLockoutEnabledAsync(user, true);
-            await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
-            
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            var lockoutEnabled = await _userManager.SetLockoutEnabledAsync(user, true);
+            if (!lockoutEnabled.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return (false, string.Join("; ", lockoutEnabled.Errors.Select(error => error.Description)));
+            }
+
+            var lockoutResult = await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
+            if (!lockoutResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return (false, string.Join("; ", lockoutResult.Errors.Select(error => error.Description)));
+            }
+
             user.LockoutReason = model.Reason;
-            await _userManager.UpdateAsync(user);
-            
-            // Rotate Security Stamp để văng user ra khỏi hệ thống ngay lập tức
-            await _userManager.UpdateSecurityStampAsync(user);
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return (false, string.Join("; ", updateResult.Errors.Select(error => error.Description)));
+            }
+
+            var stampResult = await _userManager.UpdateSecurityStampAsync(user);
+            if (!stampResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return (false, string.Join("; ", stampResult.Errors.Select(error => error.Description)));
+            }
 
             await LogActionAsync(adminId, "LockUser", user.Id, model.Reason);
+            await transaction.CommitAsync();
             return (true, "Đã khóa tài khoản.");
         }
 
@@ -197,13 +224,39 @@ namespace DatLichKhamBenh.Services.Impl
             var user = await _userManager.FindByIdAsync(targetUserId);
             if (user == null) return (false, "Không tìm thấy tài khoản.");
 
-            await _userManager.SetLockoutEndDateAsync(user, null);
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            var lockoutEnabled = await _userManager.SetLockoutEnabledAsync(user, true);
+            if (!lockoutEnabled.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return (false, string.Join("; ", lockoutEnabled.Errors.Select(error => error.Description)));
+            }
+
+            var unlockResult = await _userManager.SetLockoutEndDateAsync(user, null);
+            if (!unlockResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return (false, string.Join("; ", unlockResult.Errors.Select(error => error.Description)));
+            }
+
             user.LockoutReason = null;
-            await _userManager.UpdateAsync(user);
-            
-            await _userManager.UpdateSecurityStampAsync(user);
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return (false, string.Join("; ", updateResult.Errors.Select(error => error.Description)));
+            }
+
+            var stampResult = await _userManager.UpdateSecurityStampAsync(user);
+            if (!stampResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return (false, string.Join("; ", stampResult.Errors.Select(error => error.Description)));
+            }
 
             await LogActionAsync(adminId, "UnlockUser", user.Id, "Mở khóa tài khoản");
+            await transaction.CommitAsync();
             return (true, "Đã mở khóa tài khoản.");
         }
 

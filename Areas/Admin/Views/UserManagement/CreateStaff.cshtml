@@ -31,8 +31,9 @@
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-bold">Email (Dùng làm tên đăng nhập)</label>
-                <input asp-for="Email" type="email" class="form-control" placeholder="email@medislot.com" />
+                <label class="form-label fw-bold">Email nhân sự (Dùng làm tên đăng nhập)</label>
+                <input asp-for="Email" type="email" class="form-control" placeholder="ten@medislot.com" />
+                <div class="form-text">Tài khoản nhân sự phải dùng miền @@medislot.com.</div>
                 <span asp-validation-for="Email" class="text-danger small"></span>
             </div>
 

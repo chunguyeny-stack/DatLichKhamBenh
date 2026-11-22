@@ -149,12 +149,12 @@
         </div>
 
         <h2>Tạo tài khoản</h2>
-        <p class="subtitle">Dành cho Bệnh nhân. Nhân sự (BS/Lễ tân) vui lòng liên hệ Admin.</p>
+        <p class="subtitle">Dành cho bệnh nhân. Nhân sự (bác sĩ/lễ tân) vui lòng liên hệ quản trị viên.</p>
         @if (TempData["Error"] != null)
         {
             <div class="alert alert-danger">@TempData["Error"]</div>
         }
-        <form asp-action="Register" method="post">
+        <form asp-controller="Account" asp-action="Register" method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
             <div class="row">
                 <div class="col-md-6 form-group mb-3">
@@ -167,7 +167,7 @@
                 </div>
             </div>
             <div class="form-group mb-3">
-                <input asp-for="Email" class="form-control" placeholder="Email" />
+                <input asp-for="Email" class="form-control" placeholder="Địa chỉ email" />
                 <span asp-validation-for="Email" class="text-danger small"></span>
             </div>
             <div class="form-group mb-3">
@@ -201,7 +201,7 @@
         </form>
 
         <div class="divider">hoặc</div>
-        <form asp-action="ExternalLogin" asp-route-returnUrl="@(ViewData["ReturnUrl"])" method="post">
+        <form asp-controller="Account" asp-action="ExternalLogin" asp-route-returnUrl="@(ViewData["ReturnUrl"])" method="post">
             <button type="submit" class="btn-google" name="provider" value="Google">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20px" height="20px" style="margin-right: 8px;">
                     <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
@@ -213,7 +213,7 @@
             </button>
         </form>
         <div class="links text-center mt-4">
-            <p class="mb-0">Đã có tài khoản? <a asp-action="Login">Đăng nhập ngay</a></p>
+            <p class="mb-0">Đã có tài khoản? <a asp-controller="Account" asp-action="Login">Đăng nhập ngay</a></p>
         </div>
     </div>
 

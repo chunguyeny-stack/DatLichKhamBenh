@@ -1,5 +1,6 @@
 using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Data.Seed;
+using DatLichKhamBenh.Configuration;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Filters;
 using DatLichKhamBenh.Services.Impl;
@@ -38,7 +39,8 @@ builder.Services
         options.SignIn.RequireConfirmedEmail = true;
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddErrorDescriber<VietnameseIdentityErrorDescriber>();
 
 builder.Services.Configure<SecurityStampValidatorOptions>(options =>
 {
@@ -71,6 +73,7 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
         options.Scope.Add("email");
         options.Scope.Add("profile");
         options.ClaimActions.MapJsonKey("email_verified", "verified_email");
+        options.ClaimActions.MapJsonKey("urn:google:email_verified", "email_verified");
     });
 }
 else
@@ -115,6 +118,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 // Đăng ký service của bạn (Luồng khám bệnh)
 builder.Services.AddScoped<IMedicalRecordService, MedicalRecordService>();
+builder.Services.Configure<MediSettings>(builder.Configuration.GetSection("MediSettings"));
 
 // 6. BUILD APP
 var app = builder.Build();
