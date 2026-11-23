@@ -1,0 +1,107 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Quản trị hệ thống";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - MediSlot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/admin-portal.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="admin-shell">
+        <header class="topbar">
+            <a class="brand" href="#" data-page="dashboard">
+                <img src="~/images/medislot-logo.svg" asp-append-version="true" alt="MediSlot" />
+            </a>
+            <nav class="side-nav" aria-label="Điều hướng quản trị">
+                <button class="nav-item active" data-page="dashboard"><i class="bi bi-grid-1x2"></i><span>Tổng quan</span></button>
+                <button class="nav-item" data-page="accounts"><i class="bi bi-people"></i><span>Tài khoản</span><span class="nav-count" id="account-nav-count">0</span></button>
+                <button class="nav-item" data-page="specialties"><i class="bi bi-diagram-3"></i><span>Chuyên khoa</span></button>
+                <button class="nav-item" data-page="doctors"><i class="bi bi-person-badge"></i><span>Bác sĩ</span></button>
+                <button class="nav-item" data-page="services"><i class="bi bi-clipboard2-pulse"></i><span>Dịch vụ & giá</span></button>
+            </nav>
+            <div class="topbar-right">
+                <span class="live-status"><i></i> Hệ thống hoạt động</span>
+                <span class="top-avatar" aria-label="Quản trị viên">AD</span>
+            </div>
+        </header>
+        <main class="main-area">
+            <div class="content">
+                <div class="preview-notice"><i class="bi bi-exclamation-circle"></i><span><strong>Chế độ giao diện demo.</strong> Thao tác chỉ lưu trên trình duyệt hiện tại; chưa tạo/cập nhật dữ liệu trên máy chủ.</span></div>
+
+                <section class="page-section active" id="page-dashboard">
+                    <div class="page-heading">
+                        <div><p class="eyebrow">THỨ HAI, <span id="today-date"></span></p><h1>Tổng quan hệ thống</h1><p class="subheading">Chào mừng trở lại. Đây là tình hình hoạt động phòng khám.</p></div>
+                        <button class="button button-outline" id="export-summary"><i class="bi bi-download"></i> Xuất báo cáo</button>
+                    </div>
+                    <div class="stats-grid">
+                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Tổng bệnh nhân</span><span class="stat-icon mint"><i class="bi bi-people"></i></span></div><strong class="stat-value" id="stat-patients">0</strong><span class="stat-foot"><i class="bi bi-arrow-up-right"></i> Tài khoản bệnh nhân</span></article>
+                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Bác sĩ</span><span class="stat-icon blue"><i class="bi bi-person-badge"></i></span></div><strong class="stat-value" id="stat-doctors">0</strong><span class="stat-foot">Đang có trong danh mục</span></article>
+                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Nhân sự</span><span class="stat-icon violet"><i class="bi bi-person-workspace"></i></span></div><strong class="stat-value" id="stat-staff">0</strong><span class="stat-foot">Bác sĩ và lễ tân</span></article>
+                        <article class="stat-card"><div class="stat-top"><span class="stat-label">Doanh thu năm</span><span class="stat-icon amber"><i class="bi bi-wallet2"></i></span></div><strong class="stat-value" id="stat-revenue">0 ₫</strong><span class="stat-foot">Số liệu minh họa</span></article>
+                    </div>
+                    <div class="dashboard-grid">
+                        <section class="panel revenue-panel">
+                            <div class="panel-heading"><div><h2>Doanh thu</h2><p>Theo dõi doanh thu phòng khám</p></div><label class="select-wrap"><span class="sr-only">Khoảng thời gian</span><select id="revenue-range"><option value="month">12 tháng</option><option value="quarter">4 quý</option></select><i class="bi bi-chevron-down"></i></label></div>
+                            <div class="revenue-total"><strong id="chart-total">0 ₫</strong><span><i class="bi bi-graph-up-arrow"></i> Tổng doanh thu năm</span></div>
+                            <div class="chart-wrap"><canvas id="revenue-chart" aria-label="Biểu đồ doanh thu"></canvas></div>
+                        </section>
+                        <section class="panel quick-panel">
+                            <div class="panel-heading"><div><h2>Thao tác nhanh</h2><p>Truy cập quản lý thường dùng</p></div></div>
+                            <button class="quick-link" data-page="accounts"><span class="quick-icon mint"><i class="bi bi-person-plus"></i></span><span><strong>Tài khoản</strong><small>Thêm, sửa và cập nhật trạng thái</small></span><i class="bi bi-arrow-right"></i></button>
+                            <button class="quick-link" data-page="specialties"><span class="quick-icon blue"><i class="bi bi-diagram-3"></i></span><span><strong>Chuyên khoa</strong><small>Quản lý danh mục chuyên môn</small></span><i class="bi bi-arrow-right"></i></button>
+                            <button class="quick-link" data-page="doctors"><span class="quick-icon violet"><i class="bi bi-person-badge"></i></span><span><strong>Bác sĩ</strong><small>Chuyên khoa, kinh nghiệm, giá khám</small></span><i class="bi bi-arrow-right"></i></button>
+                            <button class="quick-link" data-page="services"><span class="quick-icon amber"><i class="bi bi-clipboard2-pulse"></i></span><span><strong>Dịch vụ y tế</strong><small>Danh mục và bảng giá dịch vụ</small></span><i class="bi bi-arrow-right"></i></button>
+                        </section>
+                    </div>
+                    <section class="panel recent-panel">
+                        <div class="panel-heading"><div><h2>Tài khoản gần đây</h2><p>Danh sách tài khoản trong bản demo</p></div><button class="text-button" data-page="accounts">Xem tất cả <i class="bi bi-arrow-right"></i></button></div>
+                        <div class="table-scroll"><table><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Email</th></tr></thead><tbody id="recent-accounts"></tbody></table></div>
+                    </section>
+                </section>
+
+                <section class="page-section" id="page-accounts">
+                    <div class="page-heading"><div><p class="eyebrow">QUẢN LÝ NGƯỜI DÙNG</p><h1>Tài khoản</h1><p class="subheading">Quản lý tài khoản bác sĩ, lễ tân và bệnh nhân.</p></div><button class="button button-primary" data-create="account"><i class="bi bi-plus-lg"></i> Thêm tài khoản</button></div>
+                    <section class="panel list-panel">
+                        <div class="list-toolbar"><div class="filter-tabs" id="account-filters"><button class="filter-tab active" data-filter="all">Tất cả</button><button class="filter-tab" data-filter="Doctor">Bác sĩ</button><button class="filter-tab" data-filter="Receptionist">Lễ tân</button><button class="filter-tab" data-filter="Patient">Bệnh nhân</button><button class="filter-tab" data-filter="locked">Đã khóa</button></div><label class="search-box"><i class="bi bi-search"></i><input id="account-search" type="search" placeholder="Tìm tên hoặc email..." /></label></div>
+                        <div class="table-scroll"><table><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Đổi MK lần đầu</th><th class="align-right">Thao tác</th></tr></thead><tbody id="account-rows"></tbody></table></div>
+                        <div class="table-footer"><span id="account-result-count"></span><span><i class="bi bi-shield-check"></i> Tác vụ demo, chưa ảnh hưởng tài khoản thật</span></div>
+                    </section>
+                </section>
+
+                <section class="page-section" id="page-specialties">
+                    <div class="page-heading"><div><p class="eyebrow">DANH MỤC Y TẾ</p><h1>Chuyên khoa</h1><p class="subheading">Tạo và cập nhật danh mục chuyên môn của phòng khám.</p></div><button class="button button-primary" data-create="specialty"><i class="bi bi-plus-lg"></i> Thêm chuyên khoa</button></div>
+                    <section class="panel list-panel"><div class="list-toolbar"><div class="toolbar-summary"><strong id="specialty-count">0</strong> chuyên khoa</div><label class="search-box"><i class="bi bi-search"></i><input id="specialty-search" type="search" placeholder="Tìm chuyên khoa..." /></label></div><div class="table-scroll"><table><thead><tr><th>Chuyên khoa</th><th>Mô tả</th><th>Số bác sĩ</th><th class="align-right">Thao tác</th></tr></thead><tbody id="specialty-rows"></tbody></table></div></section>
+                </section>
+
+                <section class="page-section" id="page-doctors">
+                    <div class="page-heading"><div><p class="eyebrow">DANH MỤC Y TẾ</p><h1>Bác sĩ</h1><p class="subheading">Quản lý chuyên khoa, kinh nghiệm và giá khám.</p></div><button class="button button-primary" data-create="doctor"><i class="bi bi-plus-lg"></i> Thêm bác sĩ</button></div>
+                    <section class="panel list-panel"><div class="list-toolbar"><div class="toolbar-summary"><strong id="doctor-count">0</strong> bác sĩ</div><label class="search-box"><i class="bi bi-search"></i><input id="doctor-search" type="search" placeholder="Tìm bác sĩ..." /></label></div><div class="table-scroll"><table><thead><tr><th>Bác sĩ</th><th>Chuyên khoa</th><th>Kinh nghiệm</th><th>Giá khám</th><th class="align-right">Thao tác</th></tr></thead><tbody id="doctor-rows"></tbody></table></div></section>
+                </section>
+
+                <section class="page-section" id="page-services">
+                    <div class="page-heading"><div><p class="eyebrow">DANH MỤC Y TẾ</p><h1>Dịch vụ & bảng giá</h1><p class="subheading">Quản lý giá khám và các dịch vụ xét nghiệm.</p></div><button class="button button-primary" data-create="service"><i class="bi bi-plus-lg"></i> Thêm dịch vụ</button></div>
+                    <section class="panel list-panel"><div class="list-toolbar"><div class="toolbar-summary"><strong id="service-count">0</strong> dịch vụ</div><label class="search-box"><i class="bi bi-search"></i><input id="service-search" type="search" placeholder="Tìm dịch vụ..." /></label></div><div class="table-scroll"><table><thead><tr><th>Tên dịch vụ</th><th>Chuyên khoa</th><th>Loại</th><th>Giá</th><th class="align-right">Thao tác</th></tr></thead><tbody id="service-rows"></tbody></table></div></section>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+        <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <div class="modal-heading"><div><p class="eyebrow" id="modal-kicker">QUẢN LÝ</p><h2 id="modal-title"></h2></div><button class="icon-button" id="modal-close" aria-label="Đóng"><i class="bi bi-x-lg"></i></button></div>
+            <form id="entity-form"><div id="modal-fields" class="modal-fields"></div><div class="modal-actions"><button type="button" class="button button-outline" id="modal-cancel">Hủy</button><button type="submit" class="button button-primary" id="modal-submit">Lưu thay đổi</button></div></form>
+        </section>
+    </div>
+    <div class="toast-region" id="toast-region" aria-live="polite"></div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="~/js/admin-portal.js" asp-append-version="true"></script>
+</body>
+</html>
