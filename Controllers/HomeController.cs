@@ -1,26 +1,33 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Identity;
+using DatLichKhamBenh.Data.Context;
 using Microsoft.AspNetCore.Authorization;
-using DatLichKhamBenh.Models.Entities;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace DatLichKhamBenh.Controllers
 {
     [Authorize]
-    public class HomeController : Controller
+    public class HomeController(ApplicationDbContext context) : Controller
     {
-        private readonly UserManager<ApplicationUser> _userManager;
-
-        public HomeController(UserManager<ApplicationUser> userManager)
-        {
-            _userManager = userManager;
-        }
-
         // GET: / (Trang chủ)
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            // Nếu đã đăng nhập, điều hướng về đúng dashboard theo role
+            ViewBag.Specialties = await context.ChuyenKhoas
+                .AsNoTracking()
+                .Where(ck => ck.TrangThai == "active" || string.IsNullOrEmpty(ck.TrangThai))
+                .OrderBy(ck => ck.TenChuyenKhoa)
+                .ToListAsync();
+
+            ViewBag.FeaturedDoctors = await context.BacSis
+                .AsNoTracking()
+                .Include(b => b.ChuyenKhoa)
+                .Include(b => b.ApplicationUser)
+                .OrderByDescending(b => b.Rating)
+                .ThenByDescending(b => b.SoLuongDanhGia)
+                .Take(3)
+                .ToListAsync();
+
             if (User.Identity?.IsAuthenticated == true)
             {
                 if (User.IsInRole("Admin"))
@@ -28,10 +35,9 @@ namespace DatLichKhamBenh.Controllers
                 if (User.IsInRole("Doctor"))
                     return RedirectToAction("Index", "Doctor", new { area = "Doctor" });
                 if (User.IsInRole("Receptionist"))
-                    return RedirectToAction("Index", "dashboard_le_tan", new { area = "Receptionist" });
+                    return RedirectToAction("Index", "Receptionist", new { area = "Receptionist" });
             }
 
-            // Chưa đăng nhập → hiển thị trang chủ giới thiệu
             return View();
         }
 
