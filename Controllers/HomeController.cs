@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Threading.Tasks;
 using DatLichKhamBenh.Data.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -5,55 +7,61 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DatLichKhamBenh.Controllers
 {
-    [Authorize]
-    public class HomeController(ApplicationDbContext context) : Controller
+    [AllowAnonymous]
+    public class DoctorController(ApplicationDbContext context) : Controller
     {
-        // GET: / (Trang chủ)
         [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? tenBacSi, int? specialtyId)
         {
+            ViewBag.TenBacSi = tenBacSi;
+            ViewBag.SpecialtyId = specialtyId;
             ViewBag.Specialties = await context.ChuyenKhoas
                 .AsNoTracking()
-                .Where(ck => ck.TrangThai == "active" || string.IsNullOrEmpty(ck.TrangThai))
+                .Where(ck => ck.TrangThai == "active" || ck.TrangThai == null)
                 .OrderBy(ck => ck.TenChuyenKhoa)
                 .ToListAsync();
 
-            ViewBag.FeaturedDoctors = await context.BacSis
+            var query = context.BacSis
                 .AsNoTracking()
                 .Include(b => b.ChuyenKhoa)
                 .Include(b => b.ApplicationUser)
-                .OrderByDescending(b => b.Rating)
-                .ThenByDescending(b => b.SoLuongDanhGia)
-                .Take(3)
-                .ToListAsync();
+                .AsQueryable();
 
-            if (User.Identity?.IsAuthenticated == true)
+            if (specialtyId is > 0)
             {
-                if (User.IsInRole("Admin"))
-                    return RedirectToAction("Index", "UserManagement", new { area = "Admin" });
-                if (User.IsInRole("Doctor"))
-                    return RedirectToAction("Index", "Doctor", new { area = "Doctor" });
-                if (User.IsInRole("Receptionist"))
-                    return RedirectToAction("Index", "Receptionist", new { area = "Receptionist" });
+                query = query.Where(b => b.ChuyenKhoaId == specialtyId.Value);
             }
 
-            return View();
+            if (!string.IsNullOrWhiteSpace(tenBacSi))
+            {
+                var keyword = tenBacSi.Trim().ToLower();
+                query = query.Where(b =>
+                    b.HoTen.ToLower().Contains(keyword) ||
+                    (b.HocVi != null && b.HocVi.ToLower().Contains(keyword)));
+            }
+
+            var doctors = await query
+                .OrderByDescending(b => b.Rating)
+                .ToListAsync();
+
+            return View(doctors);
         }
 
-        // GET: /Home/Privacy
         [HttpGet]
-        public IActionResult Privacy()
+        public async Task<IActionResult> Details(int id)
         {
-            return View();
-        }
+            var doctor = await context.BacSis
+                .AsNoTracking()
+                .Include(b => b.ChuyenKhoa)
+                .Include(b => b.ApplicationUser)
+                .FirstOrDefaultAsync(b => b.Id == id);
 
-        // GET: /Home/Error
-        [HttpGet]
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View();
+            if (doctor == null)
+            {
+                return NotFound();
+            }
+
+            return View(doctor);
         }
     }
 }
