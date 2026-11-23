@@ -1,0 +1,50 @@
+
+@model DatLichKhamBenh.Models.Entities.Specialty
+
+@{
+    ViewData["Title"] = "Thêm chuyên khoa";
+    Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container py-4">
+    <div class="card shadow-sm p-4">
+        <h3>Thêm chuyên khoa mới</h3>
+
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label">Tên chuyên khoa</label>
+                <input asp-for="Name" class="form-control"
+                       placeholder="Ví dụ: Tim mạch" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Mô tả</label>
+                <textarea asp-for="Description" class="form-control"
+                          rows="3"></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="CommonSymptoms" class="form-label">
+                    Triệu chứng phổ biến
+                </label>
+                <textarea asp-for="CommonSymptoms" class="form-control"
+                          rows="3"></textarea>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="IsActive" class="form-check-input" />
+                <label asp-for="IsActive" class="form-check-label">
+                    Đang hoạt động
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Lưu</button>
+            <a asp-action="Index" class="btn btn-secondary">Quay lại</a>
+        </form>
+    </div>
+</div>
