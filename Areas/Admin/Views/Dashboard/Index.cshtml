@@ -1,0 +1,114 @@
+
+@{
+    ViewData["Title"] = "Dashboard Admin";
+    Layout = "~/Areas/Admin/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="container-fluid py-4">
+    <h2 class="fw-bold mb-1">Dashboard quản trị</h2>
+    <p class="text-muted">Tổng quan hoạt động hệ thống MediSlot</p>
+
+    <div class="row g-3 mt-3">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 p-3">
+                <h6 class="text-muted">Tổng bác sĩ</h6>
+                <h2 class="text-primary">@ViewBag.TotalDoctors</h2>
+                <i class="bi bi-person-badge"></i>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 p-3">
+                <h6 class="text-muted">Tổng bệnh nhân</h6>
+                <h2 class="text-success">@ViewBag.TotalPatients</h2>
+                <i class="bi bi-people"></i>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 p-3">
+                <h6 class="text-muted">Tổng tài khoản</h6>
+                <h2 class="text-warning">@ViewBag.TotalUsers</h2>
+                <i class="bi bi-person-lines-fill"></i>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 p-3">
+                <h6 class="text-muted">Lịch hẹn</h6>
+                <h2 class="text-danger">@ViewBag.TotalAppointments</h2>
+                <i class="bi bi-calendar-check"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4 g-4">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 p-4">
+                <h5>Doanh thu theo tháng</h5>
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 p-4">
+                <h5>Doanh thu theo quý</h5>
+                <canvas id="quarterChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 p-4 mt-4">
+        <h5>Thông tin hệ thống</h5>
+        <p class="mb-1">Tổng số chuyên khoa: @ViewBag.TotalSpecialties</p>
+        <p class="mb-0">Năm thống kê: @DateTime.Now.Year</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const monthLabels = @Html.Raw(ViewBag.MonthLabels);
+    const monthRevenue = @Html.Raw(ViewBag.MonthRevenue);
+    const quarterRevenue = @Html.Raw(ViewBag.QuarterRevenue);
+
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+            labels: monthLabels,
+            datasets: [{
+                label: 'Doanh thu (VNĐ)',
+                data: monthRevenue,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('quarterChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Quý 1', 'Quý 2', 'Quý 3', 'Quý 4'],
+            datasets: [{
+                label: 'Doanh thu (VNĐ)',
+                data: quarterRevenue,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
