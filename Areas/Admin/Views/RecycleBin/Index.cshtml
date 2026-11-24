@@ -1,0 +1,53 @@
+@using DatLichKhamBenh.Models.Entities
+@{
+    ViewData["Title"] = "Thùng rác";
+    var users = ViewBag.DeletedUsers as List<ApplicationUser> ?? new List<ApplicationUser>();
+    var specialties = ViewBag.DeletedSpecialties as List<Specialty> ?? new List<Specialty>();
+}
+
+<section class="admin-user-management">
+    <header class="admin-page-header">
+        <div><span class="admin-page-kicker">Dữ liệu đã xóa</span><h1 class="admin-page-title">Thùng rác</h1></div>
+    </header>
+
+    @if (TempData["SuccessMessage"] != null) { <div class="alert alert-success">@TempData["SuccessMessage"]</div> }
+    @if (TempData["WarningMessage"] != null) { <div class="alert alert-warning">@TempData["WarningMessage"]</div> }
+
+    <div class="admin-panel mb-4">
+        <div class="admin-panel-header"><h2>Tài khoản</h2></div>
+        <div class="table-responsive"><table class="table"><thead><tr><th>Email</th><th>Họ tên</th><th>Thao tác</th></tr></thead><tbody>
+        @foreach (var user in users)
+        {
+            <tr><td>@user.Email</td><td>@user.FullName</td><td>
+                <form asp-controller="UserManagement" asp-action="RestoreUser" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@user.Id"/><button class="btn btn-success btn-sm">Khôi phục</button>
+                </form>
+                <form asp-controller="UserManagement" asp-action="PermanentlyDeleteUser" method="post" class="d-inline"
+                      onsubmit="return confirm('Xóa vĩnh viễn tài khoản này? Không thể hoàn tác.');">
+                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@user.Id"/><button class="btn btn-danger btn-sm">Xóa vĩnh viễn</button>
+                </form>
+            </td></tr>
+        }
+        @if (!users.Any()) { <tr><td colspan="3" class="text-center text-muted">Thùng rác tài khoản trống.</td></tr> }
+        </tbody></table></div>
+    </div>
+
+    <div class="admin-panel">
+        <div class="admin-panel-header"><h2>Chuyên khoa</h2></div>
+        <div class="table-responsive"><table class="table"><thead><tr><th>Tên chuyên khoa</th><th>Mô tả</th><th>Thao tác</th></tr></thead><tbody>
+        @foreach (var item in specialties)
+        {
+            <tr><td>@item.Name</td><td>@item.Description</td><td>
+                <form asp-controller="SpecialtyManager" asp-action="Restore" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.Id"/><button class="btn btn-success btn-sm">Khôi phục</button>
+                </form>
+                <form asp-controller="SpecialtyManager" asp-action="PermanentlyDelete" method="post" class="d-inline"
+                      onsubmit="return confirm('Xóa vĩnh viễn chuyên khoa này? Không thể hoàn tác.');">
+                    @Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.Id"/><button class="btn btn-danger btn-sm">Xóa vĩnh viễn</button>
+                </form>
+            </td></tr>
+        }
+        @if (!specialties.Any()) { <tr><td colspan="3" class="text-center text-muted">Thùng rác chuyên khoa trống.</td></tr> }
+        </tbody></table></div>
+    </div>
+</section>

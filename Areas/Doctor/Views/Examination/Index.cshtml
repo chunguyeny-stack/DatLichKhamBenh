@@ -1,98 +1,99 @@
+@model DatLichKhamBenh.Models.ViewModels.KhamBenhViewModel
 @{
     ViewData["Title"] = "Khám bệnh & Kê đơn";
     Layout = "~/Areas/Doctor/Views/Shared/_LayoutDoctor.cshtml";
 }
 
-<!-- ĐOẠN CODE HIỂN THỊ THÔNG BÁO THÀNH CÔNG -->
-@if (TempData["SuccessMessage"] != null)
-{
-    <div style="background: #dcfce7; color: #15803d; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border: 1px solid #bbf7d0;">
-        <i class="fas fa-check-circle" style="font-size: 18px;"></i>
-        <strong>@TempData["SuccessMessage"]</strong>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Phiếu khám bệnh</h2>
+        <p class="text-muted mb-0">Nhập kết quả khám cho bệnh nhân đã check-in.</p>
     </div>
-}
+    <span class="badge bg-secondary fs-6">Mã lịch: @ViewBag.AppointmentCode</span>
+</div>
 
-<form action="/Doctor/Examination/Complete" method="POST">
-    <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
-        
-        <!-- THÔNG TIN BỆNH NHÂN -->
-        <div style="flex: 1; min-width: 300px;">
-            <div class="card" style="border-left: 4px solid var(--primary);">
-                <h3 class="card-title"><i class="fas fa-user"></i> Thông tin Bệnh nhân</h3>
-                <p><strong>Họ tên:</strong> Nguyễn Văn A</p>
-                <p><strong>Tuổi:</strong> 29</p>
-                <p><strong>Triệu chứng:</strong> Đau họng, sốt cao.</p>
-                <hr style="margin: 15px 0; border-top: 1px dashed var(--border);">
-                <p><strong>Huyết áp:</strong> 120/80 mmHg</p>
-                <p><strong>Nhịp tim:</strong> 85 bpm</p>
-                <p><strong>Nhiệt độ:</strong> 38.5 °C</p>
-            </div>
+<form action="/Doctor/Examination/Complete" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="LichHenId" value="@Model.LichHenId">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <section class="card p-4 h-100">
+                <h3 class="card-title"><i class="fas fa-user"></i> Thông tin bệnh nhân</h3>
+                <p><strong>Họ tên:</strong> @ViewBag.PatientName</p>
+                <p><strong>Tuổi:</strong> @ViewBag.PatientAge</p>
+                <p><strong>Số điện thoại:</strong> @ViewBag.PatientPhone</p>
+                <p><strong>Ngày khám:</strong> @ViewBag.AppointmentDate</p>
+                <p class="mb-0"><strong>Triệu chứng:</strong><br>@ViewBag.Symptoms</p>
+            </section>
         </div>
-
-        <!-- FORM KHÁM BỆNH -->
-        <div style="flex: 2; min-width: 400px;">
-            <div class="card">
+        <div class="col-lg-8">
+            <section class="card p-4">
                 <div class="form-group">
-                    <label class="form-label">Kết quả lâm sàng <span style="color:red">*</span></label>
-                    <textarea class="form-control" name="KetQuaLamSang" required placeholder="Nhập kết quả..."></textarea>
+                    <label class="form-label" for="KetQuaLamSang">Kết quả lâm sàng <span class="text-danger">*</span></label>
+                    <textarea id="KetQuaLamSang" name="KetQuaLamSang" class="form-control" rows="3" required>@Model.KetQuaLamSang</textarea>
+                    <span asp-validation-for="KetQuaLamSang" class="text-danger"></span>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Chẩn đoán bệnh <span style="color:red">*</span></label>
-                    <textarea class="form-control" name="ChanDoan" required placeholder="Nhập chẩn đoán..."></textarea>
+                    <label class="form-label" for="ChanDoan">Chẩn đoán <span class="text-danger">*</span></label>
+                    <textarea id="ChanDoan" name="ChanDoan" class="form-control" rows="3" required>@Model.ChanDoan</textarea>
+                    <span asp-validation-for="ChanDoan" class="text-danger"></span>
                 </div>
 
-                <h4 style="margin: 20px 0 10px; font-size: 15px;">Đơn thuốc</h4>
-                <table class="table" id="tblThuoc">
-                    <thead>
-                        <tr>
-                            <th>Tên thuốc</th>
-                            <th>Liều lượng</th>
-                            <th>Số lượng</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><input type="text" class="form-control" name="DanhSachThuoc[0].TenThuoc" required></td>
-                            <td><input type="text" class="form-control" name="DanhSachThuoc[0].LieuLuong"></td>
-                            <td><input type="number" class="form-control" name="DanhSachThuoc[0].SoLuong" value="1"></td>
-                            <td><button type="button" class="btn btn-danger" onclick="removeRow(this)">Xóa</button></td>
-                        </tr>
-                    </tbody>
-                </table>
-                <button type="button" class="btn btn-outline" style="margin-bottom: 20px;" onclick="addRow()"><i class="fas fa-plus"></i> Thêm thuốc</button>
+                <h3 class="card-title mt-3"><i class="fas fa-prescription-bottle-medical"></i> Đơn thuốc</h3>
+                <div class="table-responsive">
+                    <table class="table align-middle" id="medicineTable">
+                        <thead><tr><th>Tên thuốc</th><th>Liều lượng</th><th>Số lượng</th><th></th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td><input class="form-control" name="DanhSachThuoc[0].TenThuoc" placeholder="Tên thuốc"></td>
+                                <td><input class="form-control" name="DanhSachThuoc[0].LieuLuong" placeholder="Cách dùng"></td>
+                                <td><input type="number" min="1" value="1" class="form-control" name="DanhSachThuoc[0].SoLuong"></td>
+                                <td><button type="button" class="btn btn-outline-danger" onclick="removeMedicineRow(this)" aria-label="Xóa thuốc"><i class="fas fa-trash"></i></button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-outline mb-3 align-self-start" onclick="addMedicineRow()"><i class="fas fa-plus"></i> Thêm thuốc</button>
 
                 <div class="form-group">
-                    <label class="form-label">Lời dặn</label>
-                    <textarea class="form-control" name="LoiDan" rows="2"></textarea>
+                    <label class="form-label" for="LoiDan">Lời dặn</label>
+                    <textarea id="LoiDan" name="LoiDan" class="form-control" rows="2">@Model.LoiDan</textarea>
                 </div>
-
-                <div style="text-align: right;">
-                    <a href="/Doctor/Home/Index" class="btn btn-outline">Hủy</a>
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <a href="/Doctor/Doctor/Index" class="btn btn-outline">Quay lại</a>
                     <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Hoàn thành ca khám</button>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 </form>
 
 @section Scripts {
     <script>
-        let rowIdx = 1;
-        function addRow() {
-            let tbody = document.querySelector('#tblThuoc tbody');
-            let tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><input type="text" class="form-control" name="DanhSachThuoc[${rowIdx}].TenThuoc" required></td>
-                <td><input type="text" class="form-control" name="DanhSachThuoc[${rowIdx}].LieuLuong"></td>
-                <td><input type="number" class="form-control" name="DanhSachThuoc[${rowIdx}].SoLuong" value="1"></td>
-                <td><button type="button" class="btn btn-danger" onclick="removeRow(this)">Xóa</button></td>
-            `;
-            tbody.appendChild(tr);
-            rowIdx++;
+        function renumberMedicineRows() {
+            document.querySelectorAll('#medicineTable tbody tr').forEach(function (row, index) {
+                row.querySelectorAll('input[name]').forEach(function (input) {
+                    input.name = input.name.replace(/DanhSachThuoc\[\d+\]/, 'DanhSachThuoc[' + index + ']');
+                });
+            });
         }
-        function removeRow(btn) {
-            btn.closest('tr').remove();
+
+        function addMedicineRow() {
+            const body = document.querySelector('#medicineTable tbody');
+            const row = body.insertRow();
+            row.innerHTML = `
+                <td><input class="form-control" name="DanhSachThuoc[0].TenThuoc" placeholder="Tên thuốc"></td>
+                <td><input class="form-control" name="DanhSachThuoc[0].LieuLuong" placeholder="Cách dùng"></td>
+                <td><input type="number" min="1" value="1" class="form-control" name="DanhSachThuoc[0].SoLuong"></td>
+                <td><button type="button" class="btn btn-outline-danger" onclick="removeMedicineRow(this)" aria-label="Xóa thuốc"><i class="fas fa-trash"></i></button></td>
+            `;
+            renumberMedicineRows();
+        }
+
+        function removeMedicineRow(button) {
+            button.closest('tr').remove();
+            renumberMedicineRows();
         }
     </script>
 }

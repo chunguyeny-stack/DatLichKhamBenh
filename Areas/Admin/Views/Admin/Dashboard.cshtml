@@ -1,0 +1,35 @@
+@{
+    ViewData["Title"] = "Trang chủ quản trị";
+}
+
+<section class="admin-user-management">
+    <header class="admin-page-header">
+        <div>
+            <span class="admin-page-kicker">Bảng điều khiển</span>
+            <h1 class="admin-page-title">Trang chủ quản trị</h1>
+            <p class="admin-page-description">Tổng quan tài khoản, chuyên khoa và lịch hẹn.</p>
+        </div>
+    </header>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="admin-panel p-4"><small>Tài khoản</small><h2>@ViewBag.TotalUsers</h2><span>@ViewBag.ActiveUsers hoạt động</span></div></div>
+        <div class="col-md-3"><div class="admin-panel p-4"><small>Chuyên khoa</small><h2>@ViewBag.Specialties</h2></div></div>
+        <div class="col-md-3"><div class="admin-panel p-4"><small>Bác sĩ</small><h2>@ViewBag.Doctors</h2></div></div>
+        <div class="col-md-3"><div class="admin-panel p-4"><small>Lịch hẹn</small><h2>@ViewBag.Appointments</h2></div></div>
+    </div>
+
+    <div class="admin-panel p-4">
+        <h2>Biểu đồ hoạt động</h2>
+        <p>Doanh thu lịch hẹn hoàn thành: <strong>@(((decimal)ViewBag.Revenue).ToString("N0")) đ</strong></p>
+        <div class="d-flex align-items-end gap-4" style="height:220px">
+            <div class="text-center">
+                <div style="width:80px;height:@(Math.Max(20, (int)((double)ViewBag.CompletedAppointments / Math.Max(1, (int)ViewBag.Appointments) * 180)))px;background:#df6688"></div>
+                <small>Hoàn thành (@ViewBag.CompletedAppointments)</small>
+            </div>
+            <div class="text-center">
+                <div style="width:80px;height:@(Math.Max(20, (int)((double)((int)ViewBag.Appointments - (int)ViewBag.CompletedAppointments) / Math.Max(1, (int)ViewBag.Appointments) * 180)))px;background:#8aa4d8"></div>
+                <small>Chưa hoàn thành (@((int)ViewBag.Appointments - (int)ViewBag.CompletedAppointments))</small>
+            </div>
+        </div>
+    </div>
+</section>

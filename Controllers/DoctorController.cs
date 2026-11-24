@@ -14,37 +14,38 @@ namespace DatLichKhamBenh.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(string? tenBacSi, int? specialtyId)
         {
-            var query = context.BacSis
+            var query = context.Doctors
                 .AsNoTracking()
-                .Include(b => b.ChuyenKhoa)
-                .Include(b => b.ApplicationUser)
+                .Include(d => d.Specialty)
+                .Include(d => d.User)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(tenBacSi))
             {
                 var keyword = tenBacSi.Trim();
-                query = query.Where(b =>
-                    EF.Functions.Like(b.HoTen, $"%{keyword}%") ||
-                    (b.HocVi != null && EF.Functions.Like(b.HocVi, $"%{keyword}%")) ||
-                    (b.ChuyenKhoa != null && EF.Functions.Like(b.ChuyenKhoa.TenChuyenKhoa, $"%{keyword}%")));
+                query = query.Where(d =>
+                    EF.Functions.Like(d.FullName, $"%{keyword}%") ||
+                    (d.Degree != null && EF.Functions.Like(d.Degree, $"%{keyword}%")) ||
+                    (d.Specialty != null && EF.Functions.Like(d.Specialty.Name, $"%{keyword}%")));
             }
 
             if (specialtyId is > 0)
             {
-                query = query.Where(b => b.ChuyenKhoaId == specialtyId.Value);
+                query = query.Where(d => d.SpecialtyId == specialtyId.Value);
             }
 
-            ViewBag.ChuyenKhoas = await context.ChuyenKhoas
+            query = query.Where(d => d.IsActive);
+
+            ViewBag.Specialties = await context.Specialties
                 .AsNoTracking()
-                .Where(ck => ck.TrangThai == "active")
-                .OrderBy(ck => ck.TenChuyenKhoa)
+                .Where(s => s.IsActive)
+                .OrderBy(s => s.Name)
                 .ToListAsync();
             ViewBag.TenBacSi = tenBacSi;
             ViewBag.SpecialtyId = specialtyId;
 
             var doctors = await query
-                .OrderByDescending(b => b.Rating)
-                .ThenBy(b => b.HoTen)
+                .OrderBy(d => d.FullName)
                 .ToListAsync();
 
             return View(doctors);
@@ -54,11 +55,11 @@ namespace DatLichKhamBenh.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
-            var doctor = await context.BacSis
+            var doctor = await context.Doctors
                 .AsNoTracking()
-                .Include(b => b.ChuyenKhoa)
-                .Include(b => b.ApplicationUser)
-                .FirstOrDefaultAsync(b => b.Id == id);
+                .Include(d => d.Specialty)
+                .Include(d => d.User)
+                .FirstOrDefaultAsync(d => d.Id == id && d.IsActive);
 
             if (doctor == null)
             {

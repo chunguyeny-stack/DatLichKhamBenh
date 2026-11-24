@@ -363,7 +363,7 @@
                         ? doc.User!.FullName
                         : (doc.User?.Email ?? doc.User?.UserName ?? $"Bác sĩ #{doc.Id}");
                     var tenHienThi = string.IsNullOrWhiteSpace(doc.Degree) ? tenBs : $"{doc.Degree} - {tenBs}";
-                    var kinhNghiemText = doc.YearsOfExperience.HasValue ? $"{doc.YearsOfExperience.Value} năm" : "Đang cập nhật";
+                    var kinhNghiemText = doc.YearsOfExperience > 0 ? $"{doc.YearsOfExperience} năm" : "Đang cập nhật";
 
                     
                     <div class="col-md-4">
@@ -372,7 +372,7 @@
                                 <h5 class="doc-item-title">@tenHienThi</h5>
                                 <p class="doc-item-meta">Chuyên khoa: <strong>@(doc.Specialty?.Name ?? "Chưa phân khoa")</strong></p>
                                 <p class="doc-item-meta">Kinh nghiệm: <strong>@kinhNghiemText</strong></p>
-                                <p class="doc-item-meta mb-0">Giá khám: <strong>200,000 đ</strong></p>
+                                <p class="doc-item-meta mb-0">Giá khám: <strong>@(doc.ConsultationFee > 0 ? doc.ConsultationFee.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) : "200,000") đ</strong></p>
                             </div>
                             <div class="doc-item-footer">
                                 <a asp-action="Details" asp-route-id="@doc.Id" class="btn-doc-detail">Xem chi tiết BS</a>

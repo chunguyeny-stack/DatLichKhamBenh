@@ -2,11 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-<<<<<<< HEAD
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Authorization;
-=======
->>>>>>> 44ae3b0 (cập nhật lại dữ liệu, và giao diện lễ tân)
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DatLichKhamBenh.Data.Context;
@@ -15,11 +11,7 @@ using DatLichKhamBenh.Models.Entities;
 namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 {
     [Area("Receptionist")]
-<<<<<<< HEAD
     [Authorize(Roles = "Receptionist")]
-=======
-    // [Authorize(Roles = "Receptionist")]
->>>>>>> 44ae3b0 (cập nhật lại dữ liệu, và giao diện lễ tân)
     public class vien_phi : Controller
     {
         private readonly ApplicationDbContext _context;

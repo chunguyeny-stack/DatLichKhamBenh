@@ -11,115 +11,103 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DatLichKhamBenh.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Patient")]
     public class PatientController(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager) : Controller
     {
-        // Quản lý lịch hẹn cá nhân: Xem danh sách (Chờ duyệt / Đã khám / Đã hủy)
         [HttpGet]
         public async Task<IActionResult> Appointments(string? trangThaiLoc)
         {
             var userId = userManager.GetUserId(User);
             if (string.IsNullOrEmpty(userId))
-            {
                 return Challenge();
-            }
 
-            var benhNhan = await context.BenhNhans
-                .Include(bn => bn.User)
-                .FirstOrDefaultAsync(bn => bn.UserId == userId);
+            var patient = await context.Patients
+                .FirstOrDefaultAsync(p => p.UserId == userId);
 
-            if (benhNhan == null)
+            if (patient == null)
             {
-                benhNhan = new BenhNhan { UserId = userId };
-                context.BenhNhans.Add(benhNhan);
-                await context.SaveChangesAsync();
-                benhNhan = await context.BenhNhans
-                    .Include(bn => bn.User)
-                    .FirstAsync(bn => bn.Id == benhNhan.Id);
-            }
-
-            var query = context.LichHens
-                .AsNoTracking()
-                .Include(l => l.BacSiThongTin)
-                .ThenInclude(b => b!.ChuyenKhoa)
-                .Where(l => l.BenhNhanId == benhNhan.Id);
-
-            if (!string.IsNullOrWhiteSpace(trangThaiLoc) && trangThaiLoc != "TatCa")
-            {
-                query = trangThaiLoc switch
+                var user = await userManager.GetUserAsync(User);
+                patient = new Patient
                 {
-                    "ChoDuyet" => query.Where(l =>
-                        l.TrangThai == "Chờ duyệt" || l.TrangThai == "Chờ xác nhận" || l.TrangThai == "ChoXacNhan"),
-                    "DaKham" => query.Where(l =>
-                        l.TrangThai == "Đã khám" || l.TrangThai == "Hoàn thành" || l.TrangThai == "HoanThanh"),
-                    "DaHuy" => query.Where(l => l.TrangThai == "Đã hủy" || l.TrangThai == "DaHuy"),
-                    _ => query.Where(l => l.TrangThai == trangThaiLoc)
+                    UserId = userId,
+                    FullName = user?.FullName ?? user?.Email ?? "Bệnh nhân",
+                    PhoneNumber = user?.PhoneNumber,
+                    Email = user?.Email
                 };
+                context.Patients.Add(patient);
+                await context.SaveChangesAsync();
             }
 
-            var lichHens = await query
-                .OrderByDescending(l => l.NgayKham)
-                .ThenByDescending(l => l.Id)
-                .ToListAsync();
+            var query = context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Doctor)
+                    .ThenInclude(d => d!.Specialty)
+                .Where(a => a.PatientId == patient.Id);
 
-            ViewBag.BenhNhan = benhNhan;
-            ViewBag.TrangThaiLoc = string.IsNullOrWhiteSpace(trangThaiLoc) ? "TatCa" : trangThaiLoc;
+            query = trangThaiLoc switch
+            {
+                "ChoXacNhan" => query.Where(a => a.Status == "Chờ xác nhận" || a.Status == "Chờ"),
+                "DaXacNhan" => query.Where(a => a.Status == "Đã xác nhận" || a.Status == "Đã đến"),
+                "HoanThanh" => query.Where(a => a.Status == "Hoàn thành" || a.Status == "Đã thanh toán"),
+                "DaHuy" => query.Where(a => a.Status == "Đã hủy" || a.Status == "Cancelled"),
+                _ => query
+            };
 
-            return View(lichHens);
+            ViewBag.TrangThaiLoc = trangThaiLoc;
+            return View(await query
+                .OrderByDescending(a => a.AppointmentDate)
+                .ThenByDescending(a => a.Id)
+                .ToListAsync());
         }
 
-        // Hủy lịch (trước 24h)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CancelAppointment(int id)
         {
             var userId = userManager.GetUserId(User);
-            var benhNhan = await context.BenhNhans.FirstOrDefaultAsync(bn => bn.UserId == userId);
-            if (benhNhan == null)
-            {
-                return RedirectToAction("Index", "Home");
-            }
+            var patient = await context.Patients.FirstOrDefaultAsync(p => p.UserId == userId);
+            var appointment = patient == null
+                ? null
+                : await context.Appointments.FirstOrDefaultAsync(a => a.Id == id && a.PatientId == patient.Id);
 
-            var lichHen = await context.LichHens
-                .FirstOrDefaultAsync(l => l.Id == id && l.BenhNhanId == benhNhan.Id);
-
-            if (lichHen == null)
+            if (appointment == null)
             {
                 TempData["Error"] = "Không tìm thấy lịch hẹn.";
                 return RedirectToAction(nameof(Appointments));
             }
 
-            if ((lichHen.NgayKham.Date - DateTime.Today).TotalHours < 24)
+            if ((appointment.AppointmentDate.Date - DateTime.Today).TotalHours < 24)
             {
                 TempData["Error"] = "Chỉ có thể hủy lịch hẹn trước thời điểm khám ít nhất 24 giờ.";
                 return RedirectToAction(nameof(Appointments));
             }
 
-            lichHen.TrangThai = "Đã hủy";
-            await context.SaveChangesAsync();
+            if (appointment.Status == "Hoàn thành" || appointment.Status == "Đã thanh toán"
+                || appointment.Status == "Đã hủy" || appointment.Status == "Cancelled")
+            {
+                TempData["Error"] = "Lịch hẹn này không thể hủy.";
+                return RedirectToAction(nameof(Appointments));
+            }
 
+            appointment.Status = "Đã hủy";
+            await context.SaveChangesAsync();
             TempData["Success"] = $"Đã hủy lịch hẹn #{id}.";
             return RedirectToAction(nameof(Appointments));
         }
 
-        // Xác nhận đổi lịch khi BS nghỉ đột xuất
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmReschedule(int id, DateTime ngayMoi, CaKham caMoi, string? khungGioMoi)
         {
             var userId = userManager.GetUserId(User);
-            var benhNhan = await context.BenhNhans.FirstOrDefaultAsync(bn => bn.UserId == userId);
-            if (benhNhan == null)
-            {
-                return RedirectToAction("Index", "Home");
-            }
+            var patient = await context.Patients.FirstOrDefaultAsync(p => p.UserId == userId);
+            var appointment = patient == null
+                ? null
+                : await context.Appointments.FirstOrDefaultAsync(a => a.Id == id && a.PatientId == patient.Id);
 
-            var lichHen = await context.LichHens
-                .FirstOrDefaultAsync(l => l.Id == id && l.BenhNhanId == benhNhan.Id);
-
-            if (lichHen == null)
+            if (appointment == null)
             {
                 TempData["Error"] = "Không tìm thấy lịch hẹn.";
                 return RedirectToAction(nameof(Appointments));
@@ -131,20 +119,39 @@ namespace DatLichKhamBenh.Controllers
                 return RedirectToAction(nameof(Appointments));
             }
 
-            var slotMacDinh = caMoi switch
+            var defaultSlot = caMoi switch
             {
                 CaKham.Chieu => "13:30 - 14:30",
                 CaKham.Toi => "18:00 - 19:00",
                 _ => "08:00 - 09:00"
             };
-            var gioChon = string.IsNullOrWhiteSpace(khungGioMoi) ? slotMacDinh : khungGioMoi.Trim();
+            var selectedSlot = string.IsNullOrWhiteSpace(khungGioMoi) ? defaultSlot : khungGioMoi.Trim();
 
-            lichHen.NgayKham = ngayMoi.Date;
-            lichHen.KhungGio = $"[{caMoi}] {gioChon}";
-            lichHen.TrangThai = "Chờ duyệt";
+            var hasSchedule = await context.DoctorSchedules.AnyAsync(s =>
+                s.DoctorId == appointment.DoctorId
+                && s.WorkDate.Date == ngayMoi.Date
+                && s.TimeSlot == selectedSlot
+                && s.IsAvailable
+                && string.IsNullOrEmpty(s.AbsenceReason));
+            var hasConflict = await context.Appointments.AnyAsync(a =>
+                a.DoctorId == appointment.DoctorId
+                && a.AppointmentDate.Date == ngayMoi.Date
+                && a.TimeSlot == selectedSlot
+                && a.Id != id
+                && a.Status != "Đã hủy"
+                && a.Status != "Cancelled");
+
+            if (!hasSchedule || hasConflict)
+            {
+                TempData["Error"] = "Khung giờ mới không còn trống. Vui lòng chọn lịch khác.";
+                return RedirectToAction(nameof(Appointments));
+            }
+
+            appointment.AppointmentDate = ngayMoi.Date;
+            appointment.TimeSlot = selectedSlot;
+            appointment.Status = "Chờ xác nhận";
             await context.SaveChangesAsync();
-
-            TempData["Success"] = $"Đã xác nhận đổi lịch hẹn #{id} sang {ngayMoi:dd/MM/yyyy} ({caMoi} - {gioChon}).";
+            TempData["Success"] = $"Đã gửi yêu cầu đổi lịch hẹn #{id} sang {ngayMoi:dd/MM/yyyy} ({selectedSlot}).";
             return RedirectToAction(nameof(Appointments));
         }
     }

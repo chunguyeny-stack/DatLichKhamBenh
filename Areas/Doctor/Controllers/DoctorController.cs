@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using DatLichKhamBenh.Models.Entities;
+using DatLichKhamBenh.Data.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace DatLichKhamBenh.Areas.Doctor.Controllers
 {
@@ -11,13 +13,16 @@ namespace DatLichKhamBenh.Areas.Doctor.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<DoctorController> _logger;
+        private readonly ApplicationDbContext _context;
 
         public DoctorController(
             UserManager<ApplicationUser> userManager,
-            ILogger<DoctorController> logger)
+            ILogger<DoctorController> logger,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _logger = logger;
+            _context = context;
         }
 
         // GET: /Doctor/Doctor/Index
@@ -29,8 +34,33 @@ namespace DatLichKhamBenh.Areas.Doctor.Controllers
             if (user == null)
                 return Challenge(); // Buộc đăng nhập lại nếu không tìm thấy
 
-            ViewBag.FullName = $"{user.MiddleName} {user.FirstName}".Trim();
-            return View();
+            var doctor = await _context.Doctors
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.UserId == user.Id && d.IsActive);
+            if (doctor == null)
+                return NotFound("Tài khoản chưa được liên kết với hồ sơ bác sĩ.");
+
+            var appointments = await _context.Appointments
+                .AsNoTracking()
+                .Include(a => a.Patient)
+                .Where(a => a.DoctorId == doctor.Id
+                    && a.AppointmentDate.Date >= DateTime.Today
+                    && a.Status != "Hoàn thành"
+                    && a.Status != "Đã thanh toán"
+                    && a.Status != "Đã hủy"
+                    && a.Status != "Cancelled")
+                .OrderBy(a => a.AppointmentDate)
+                .ThenBy(a => a.TimeSlot)
+                .ToListAsync();
+
+            ViewBag.FullName = user.FullName ?? $"{user.MiddleName} {user.FirstName}".Trim();
+            ViewBag.WaitingCount = appointments.Count(a => a.Status == "Chờ xác nhận" || a.Status == "Chờ");
+            ViewBag.CheckedInCount = appointments.Count(a => a.Status == "Đã đến");
+            ViewBag.CompletedCount = await _context.Appointments.CountAsync(a =>
+                a.DoctorId == doctor.Id
+                && a.AppointmentDate.Date == DateTime.Today
+                && (a.Status == "Hoàn thành" || a.Status == "Đã thanh toán"));
+            return View("~/Areas/Doctor/Views/Home/Index.cshtml", appointments);
         }
 
         // GET: /Doctor/Doctor/Appointments

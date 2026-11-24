@@ -50,7 +50,7 @@
         <div class="container-fluid px-4 d-flex align-items-center justify-content-between">
             
             <!-- Logo -->
-            <a href="/Doctor/Home/Index" class="brand-logo">
+            <a href="/Doctor/Doctor" class="brand-logo">
                 <img src="~/images/logo.png" alt="MediSlot Logo">
                 <div>
                     <p class="brand-name">MediSlot</p>
@@ -60,8 +60,9 @@
 
             <!-- Menu Ngang (Ở giữa) -->
             <ul class="nav-menu-horizontal d-none d-md-flex">
-                <li><a href="/Doctor/Home/Index"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li><a href="/Doctor/Doctor"><i class="fas fa-home"></i> Trang chủ</a></li>
                 <li><a href="/Doctor/Examination/Index"><i class="fas fa-stethoscope"></i> Khám bệnh</a></li>
+                <li><a href="/Doctor/Profile/Index"><i class="fas fa-user"></i> Hồ sơ cá nhân</a></li>
                 <li><a href="/Doctor/LeaveRequest/Index"><i class="fas fa-calendar-minus"></i> Xin nghỉ phép</a></li>
             </ul>
 
@@ -69,13 +70,13 @@
             <div class="user-actions">
                 <button class="btn btn-light rounded-circle" style="width: 35px; height: 35px; padding: 0;"><i class="fas fa-bell"></i></button>
                 
-                <div class="user-info">
+                <a href="/Doctor/Profile/Index" class="user-info text-decoration-none text-dark" title="Hồ sơ cá nhân bác sĩ">
                     <div class="avatar-circle">BS</div>
-                    <span class="d-none d-lg-block">BS. Nguyễn Văn A</span>
-                </div>
+                    <span class="d-none d-lg-block">@((ViewBag.FullName as string) ?? User.Identity?.Name ?? "Bác sĩ")</span>
+                </a>
 
                 <!-- Nút Đăng xuất lấy từ code của bạn kia (Bảo mật bằng POST) -->
-                <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+                <form action="/Account/Logout" method="post" class="m-0">
                     @Html.AntiForgeryToken()
                     <button class="btn btn-outline-danger btn-sm" type="submit" style="border-radius: 20px;">
                         <i class="fas fa-sign-out-alt"></i> Đăng xuất

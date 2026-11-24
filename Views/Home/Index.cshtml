@@ -2,8 +2,8 @@
 @using System.Globalization
 @{
     ViewData["Title"] = "Trang chủ";
-    var specialties = ViewBag.Specialties as IEnumerable<ChuyenKhoa> ?? [];
-    var featuredDoctors = ViewBag.FeaturedDoctors as IEnumerable<BacSi> ?? [];
+    var specialties = ViewBag.Specialties as IEnumerable<Specialty> ?? [];
+    var featuredDoctors = ViewBag.FeaturedDoctors as IEnumerable<Doctor> ?? [];
 }
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
@@ -359,6 +359,12 @@
         padding: 20px;
     }
 
+    @@media (min-width: 768px) {
+        .home-featured-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+
     @@media (max-width: 767px) {
         .home-featured-grid {
             grid-template-columns: 1fr;
@@ -436,7 +442,7 @@
                         <option value="">-- Tất cả chuyên khoa --</option>
                         @foreach (var item in specialties)
                         {
-                            <option value="@item.Id">@item.TenChuyenKhoa</option>
+                            <option value="@item.Id">@item.Name</option>
                         }
                     </select>
                 </div>
@@ -462,23 +468,22 @@
                 <div class="home-featured-grid">
                     @foreach (var doctor in featuredDoctors)
                     {
-                        var doctorName = !string.IsNullOrWhiteSpace(doctor.HoTen)
-                            ? doctor.HoTen
-                            : (doctor.ApplicationUser?.FullName
-                               ?? doctor.ApplicationUser?.Email
+                        var doctorName = !string.IsNullOrWhiteSpace(doctor.FullName)
+                            ? doctor.FullName
+                            : (doctor.User?.FullName
+                               ?? doctor.User?.Email
                                ?? $"Bác sĩ #{doctor.Id}");
-                        var displayName = string.IsNullOrWhiteSpace(doctor.HocVi)
+                        var displayName = string.IsNullOrWhiteSpace(doctor.Degree)
                             ? doctorName
-                            : $"{doctor.HocVi} - {doctorName}";
-                        var fee = (doctor.GiaKham > 0 ? doctor.GiaKham : 200000m)
+                            : $"{doctor.Degree} - {doctorName}";
+                        var fee = (doctor.ConsultationFee > 0 ? doctor.ConsultationFee : 200000m)
                             .ToString("N0", CultureInfo.GetCultureInfo("vi-VN"));
 
                         <article class="home-featured-card">
                             <div class="home-featured-body">
                                 <h3 class="home-featured-name">@displayName</h3>
-                                <p class="home-featured-meta">Chuyên khoa: <strong>@(doctor.ChuyenKhoa?.TenChuyenKhoa ?? "Chưa phân khoa")</strong></p>
-                                <p class="home-featured-meta">Kinh nghiệm: <strong>@(string.IsNullOrWhiteSpace(doctor.KinhNghiem) ? "Đang cập nhật" : doctor.KinhNghiem)</strong></p>
-                                <p class="home-featured-meta">Đánh giá: <strong>★ @doctor.Rating.ToString("0.0")</strong></p>
+                                <p class="home-featured-meta">Chuyên khoa: <strong>@(doctor.Specialty?.Name ?? "Chưa phân khoa")</strong></p>
+                                <p class="home-featured-meta">Kinh nghiệm: <strong>@(doctor.YearsOfExperience > 0 ? $"{doctor.YearsOfExperience} năm" : "Đang cập nhật")</strong></p>
                                 <p class="home-featured-meta">Giá khám: <strong>@fee đ</strong></p>
                             </div>
                             <div class="home-featured-actions">

@@ -1,0 +1,31 @@
+@model IReadOnlyList<DatLichKhamBenh.Models.Entities.Appointment>
+@{
+    ViewData["Title"] = "Danh sách khám bệnh";
+    Layout = "~/Areas/Doctor/Views/Shared/_LayoutDoctor.cshtml";
+}
+
+<section class="card p-4">
+    <h2 class="card-title"><i class="fas fa-stethoscope"></i> Hàng đợi khám bệnh</h2>
+    <p class="text-muted">Chỉ hiển thị bệnh nhân đã được lễ tân xác nhận check-in.</p>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead><tr><th>Mã lịch</th><th>Bệnh nhân</th><th>Ngày / giờ</th><th>Triệu chứng</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@($"LH{item.Id:D3}")</td>
+                    <td>@(item.Patient?.FullName ?? "Bệnh nhân")</td>
+                    <td>@item.AppointmentDate.ToString("dd/MM/yyyy")<br/><span class="text-muted">@item.TimeSlot</span></td>
+                    <td>@item.Symptoms</td>
+                    <td><a href="/Doctor/Examination/Index?id=@item.Id" class="btn btn-primary btn-sm">Khám ngay</a></td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="5" class="text-center text-muted py-4">Chưa có bệnh nhân chờ khám.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

@@ -553,7 +553,7 @@ public class AccountController : Controller
 
         var roles = await _userManager.GetRolesAsync(user);
         if (roles.Contains("Admin"))
-            return RedirectToAction("Index", "UserManagement", new { area = "Admin" });
+            return RedirectToAction("Dashboard", "Admin", new { area = "Admin" });
         if (roles.Contains("Doctor"))
             return RedirectToAction("Index", "Doctor", new { area = "Doctor" });
         if (roles.Contains("Receptionist"))

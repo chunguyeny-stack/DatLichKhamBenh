@@ -1,0 +1,21 @@
+@model IEnumerable<DatLichKhamBenh.Models.Entities.Specialty>
+@{ ViewData["Title"] = "Quản lý chuyên khoa"; }
+<section class="admin-user-management">
+    <header class="admin-page-header"><div><span class="admin-page-kicker">Danh mục y tế</span><h1 class="admin-page-title">Chuyên khoa</h1></div>
+        <a asp-action="Create" class="admin-create-button">Thêm chuyên khoa</a>
+    </header>
+    @if (TempData["SuccessMessage"] != null) { <div class="alert alert-success">@TempData["SuccessMessage"]</div> }
+    @if (TempData["WarningMessage"] != null) { <div class="alert alert-warning">@TempData["WarningMessage"]</div> }
+    <div class="admin-panel"><div class="table-responsive"><table class="table"><thead><tr><th>Tên chuyên khoa</th><th>Mô tả</th><th>Triệu chứng</th><th>Thao tác</th></tr></thead><tbody>
+    @foreach (var item in Model) {
+        <tr><td>@item.Name</td><td>@item.Description</td><td>@item.CommonSymptoms</td><td>
+            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary btn-sm">Sửa</a>
+            <form asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline"
+                  onsubmit="return confirm('Chuyển chuyên khoa vào thùng rác?');">
+                @Html.AntiForgeryToken()<button class="btn btn-danger btn-sm">Xóa</button>
+            </form>
+        </td></tr>
+    }
+    @if (!Model.Any()) { <tr><td colspan="4" class="text-center text-muted">Chưa có chuyên khoa.</td></tr> }
+    </tbody></table></div></div>
+</section>

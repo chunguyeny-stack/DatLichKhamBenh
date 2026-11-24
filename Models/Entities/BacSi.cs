@@ -53,10 +53,5 @@ namespace DatLichKhamBenh.Models.Entities
         [Column("hinh_anh")]
         public string? HinhAnh { get; set; }
 
-        [NotMapped]
-        public virtual ICollection<LichLamViec> LichLamViecs { get; set; } = new List<LichLamViec>();
-
-        [NotMapped]
-        public virtual ICollection<LichHen> LichHens { get; set; } = new List<LichHen>();
     }
 }

@@ -23,7 +23,5 @@ namespace DatLichKhamBenh.Models.Entities
         [StringLength(10)]
         [Display(Name = "gioitinh")]
         public string? Gender { get; set; }
-
-        public virtual ICollection<LichHen> LichHens { get; set; } = new List<LichHen>();
     }
 }

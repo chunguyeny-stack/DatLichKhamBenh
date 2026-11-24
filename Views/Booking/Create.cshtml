@@ -323,7 +323,7 @@
                                     <option value="">-- Tất cả chuyên khoa --</option>
                                     @foreach (var sp in Model.ChuyenKhoas)
                                     {
-                                        <option value="@sp.Id">@sp.TenChuyenKhoa</option>
+                                        <option value="@sp.Id" selected="@(Model.ChuyenKhoaId == sp.Id)">@sp.Name</option>
                                     }
                                 </select>
                             </div>
@@ -334,15 +334,15 @@
                                     <option value="">-- Chọn bác sĩ --</option>
                                     @foreach (var doc in Model.BacSis)
                                     {
-                                        var fullName = !string.IsNullOrWhiteSpace(doc.HoTen)
-                                            ? doc.HoTen
-                                            : (doc.ApplicationUser?.FullName ?? doc.ApplicationUser?.Email ?? $"Bác sĩ #{doc.Id}");
-                                        var label = string.IsNullOrWhiteSpace(doc.HocVi)
+                                        var fullName = !string.IsNullOrWhiteSpace(doc.FullName)
+                                            ? doc.FullName
+                                            : (doc.User?.FullName ?? doc.User?.Email ?? $"Bác sĩ #{doc.Id}");
+                                        var label = string.IsNullOrWhiteSpace(doc.Degree)
                                             ? fullName
-                                            : $"{doc.HocVi} - {fullName}";
-                                        var khoaName = doc.ChuyenKhoa?.TenChuyenKhoa ?? "";
+                                            : $"{doc.Degree} - {fullName}";
+                                        var khoaName = doc.Specialty?.Name ?? "";
                                         var optionText = string.IsNullOrEmpty(khoaName) ? label : $"{label} ({khoaName})";
-                                        <option value="@doc.Id" data-specialty="@doc.ChuyenKhoaId">@optionText</option>
+                                        <option value="@doc.Id" data-specialty="@doc.SpecialtyId" data-fee="@doc.ConsultationFee.ToString(System.Globalization.CultureInfo.InvariantCulture)" selected="@(Model.BacSiId == doc.Id)">@optionText</option>
                                     }
                                 </select>
                                 <span asp-validation-for="BacSiId" class="text-danger small"></span>
@@ -417,7 +417,8 @@
 
 <script>
     (function () {
-        const baseFee = 200000;
+        let baseFee = Number.parseFloat(document.getElementById('doctorSelect')?.selectedOptions[0]?.dataset.fee || '200000');
+        if (!Number.isFinite(baseFee) || baseFee <= 0) baseFee = 200000;
         const specialtySelect = document.getElementById('specialtySelect');
         const doctorSelect = document.getElementById('doctorSelect');
         const caKhamSelect = document.getElementById('caKhamSelect');
@@ -426,9 +427,9 @@
         const totalFeeText = document.getElementById('totalFeeText');
 
         const slotsByShift = {
-            '0': ['08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00'],
-            '1': ['13:30 - 14:30', '14:30 - 15:30', '15:30 - 16:30'],
-            '2': ['18:00 - 19:00', '19:00 - 20:00']
+            '1': ['08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00'],
+            '2': ['13:30 - 14:30', '14:30 - 15:30', '15:30 - 16:30'],
+            '3': ['18:00 - 19:00', '19:00 - 20:00']
         };
 
         function formatVnd(amount) {
@@ -436,8 +437,12 @@
         }
 
         function updateFeeAndSlots() {
+            const selectedFee = Number.parseFloat(doctorSelect.selectedOptions[0]?.dataset.fee || '200000');
+            baseFee = Number.isFinite(selectedFee) && selectedFee > 0 ? selectedFee : 200000;
+            const baseFeeText = document.getElementById('baseFeeText');
+            if (baseFeeText) baseFeeText.textContent = formatVnd(baseFee);
             const shiftVal = caKhamSelect.value;
-            const isEvening = shiftVal === '2' || caKhamSelect.options[caKhamSelect.selectedIndex]?.text.toLowerCase().includes('tối');
+            const isEvening = shiftVal === '3' || caKhamSelect.options[caKhamSelect.selectedIndex]?.text.toLowerCase().includes('tối');
             const surcharge = isEvening ? baseFee * 0.1 : 0;
             surchargeText.textContent = formatVnd(surcharge);
             totalFeeText.textContent = formatVnd(baseFee + surcharge);
@@ -471,6 +476,7 @@
 
 
         specialtySelect?.addEventListener('change', filterDoctorsBySpecialty);
+        doctorSelect?.addEventListener('change', updateFeeAndSlots);
         caKhamSelect?.addEventListener('change', updateFeeAndSlots);
 
         filterDoctorsBySpecialty();

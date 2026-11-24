@@ -80,6 +80,8 @@
                                 </td>
                                 <td>
                                     <div class="admin-table-actions">
+                                        <a asp-action="EditUser" asp-route-id="@user.Id"
+                                           class="admin-action-button admin-action-reset" title="Sửa tài khoản">Sửa</a>
                                         <a asp-action="ResetPassword" asp-route-id="@user.Id"
                                            class="admin-action-button admin-action-reset" title="Reset mật khẩu">Reset MK</a>
                                         @if (isLocked)
@@ -93,6 +95,11 @@
                                             <a asp-action="LockUser" asp-route-id="@user.Id"
                                                class="admin-action-button admin-action-lock" title="Khóa tài khoản">Khóa</a>
                                         }
+                                        <form asp-action="DeleteUser" asp-route-id="@user.Id" method="post" class="m-0"
+                                              onsubmit="return confirm('Chuyển tài khoản này vào thùng rác?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="admin-action-button admin-action-delete" title="Chuyển vào thùng rác"><i class="bi bi-trash"></i> Xóa</button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>

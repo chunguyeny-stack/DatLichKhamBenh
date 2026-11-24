@@ -118,6 +118,8 @@ namespace DatLichKhamBenh.Data.Seed
                 await SeedDemoPatient(userManager, context, config, logger);
                 await SeedDemoDoctor(userManager, context, config, logger);
                 await SeedDemoReceptionist(userManager, config, logger);
+                await SeedDoctorAvailability(context);
+                await SeedLegacyDoctorDirectory(context);
             }
         }
 
@@ -137,9 +139,12 @@ namespace DatLichKhamBenh.Data.Seed
                     var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
                     await userManager.ResetPasswordAsync(existing, resetToken, testPassword);
                     existing.EmailConfirmed = true;
-                    existing.MustChangePassword = true;
+                    existing.MustChangePassword = false;
                     await userManager.UpdateAsync(existing);
                 }
+
+                if (!await userManager.IsInRoleAsync(existing, "Patient"))
+                    await userManager.AddToRoleAsync(existing, "Patient");
 
                 if (!await context.Patients.AnyAsync(p => p.UserId == existing.Id))
                 {
@@ -162,11 +167,9 @@ namespace DatLichKhamBenh.Data.Seed
                 Email = email,
                 EmailConfirmed = true,
                 FullName = "Nguyễn Văn A",
-                FirstName = "Văn A",
-                MiddleName = "Nguyễn",
                 PhoneNumber = "0987654321",
                 IsActive = true,
-                MustChangePassword = true,
+                MustChangePassword = false,
                 LockoutEnabled = true
             };
 
@@ -212,9 +215,12 @@ namespace DatLichKhamBenh.Data.Seed
                     var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
                     await userManager.ResetPasswordAsync(existing, resetToken, testPassword);
                     existing.EmailConfirmed = true;
-                    existing.MustChangePassword = true;
+                    existing.MustChangePassword = false;
                     await userManager.UpdateAsync(existing);
                 }
+
+                if (!await userManager.IsInRoleAsync(existing, "Doctor"))
+                    await userManager.AddToRoleAsync(existing, "Doctor");
 
                 if (!await context.Doctors.AnyAsync(d => d.UserId == existing.Id))
                 {
@@ -248,7 +254,7 @@ namespace DatLichKhamBenh.Data.Seed
                 MiddleName = "Trần Thị",
                 PhoneNumber = "0912345678",
                 IsActive = true,
-                MustChangePassword = true,
+                MustChangePassword = false,
                 LockoutEnabled = true
             };
 
@@ -303,9 +309,11 @@ namespace DatLichKhamBenh.Data.Seed
                     var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
                     await userManager.ResetPasswordAsync(existing, resetToken, testPassword);
                     existing.EmailConfirmed = true;
-                    existing.MustChangePassword = true;
+                    existing.MustChangePassword = false;
                     await userManager.UpdateAsync(existing);
                 }
+                if (!await userManager.IsInRoleAsync(existing, "Receptionist"))
+                    await userManager.AddToRoleAsync(existing, "Receptionist");
                 return;
             }
 
@@ -326,7 +334,7 @@ namespace DatLichKhamBenh.Data.Seed
                 MiddleName = "Mẫu",
                 IsActive = true,
                 LockoutEnabled = true,
-                MustChangePassword = true
+                MustChangePassword = false
             };
 
             var result = await userManager.CreateAsync(user, password);
@@ -338,6 +346,109 @@ namespace DatLichKhamBenh.Data.Seed
             }
 
             await userManager.AddToRoleAsync(user, "Receptionist");
+        }
+
+        private static async Task SeedDoctorAvailability(ApplicationDbContext context)
+        {
+            var doctor = await context.Doctors
+                .OrderBy(d => d.Id)
+                .FirstOrDefaultAsync(d => d.IsActive);
+            if (doctor == null)
+                return;
+
+            var slots = new[]
+            {
+                ("Ca sáng", "08:00 - 09:00"),
+                ("Ca sáng", "09:00 - 10:00"),
+                ("Ca sáng", "10:00 - 11:00"),
+                ("Ca chiều", "13:30 - 14:30"),
+                ("Ca chiều", "14:30 - 15:30"),
+                ("Ca chiều", "15:30 - 16:30"),
+                ("Ca tối", "18:00 - 19:00"),
+                ("Ca tối", "19:00 - 20:00")
+            };
+
+            var startDate = DateTime.Today;
+            var endDate = startDate.AddDays(14);
+            var existing = await context.DoctorSchedules
+                .Where(s => s.DoctorId == doctor.Id
+                    && s.WorkDate >= startDate
+                    && s.WorkDate <= endDate)
+                .Select(s => s.TimeSlot)
+                .ToListAsync();
+
+            for (var date = startDate; date <= endDate; date = date.AddDays(1))
+            {
+                foreach (var (shift, timeSlot) in slots)
+                {
+                    if (existing.Contains(timeSlot)
+                        && await context.DoctorSchedules.AnyAsync(s =>
+                            s.DoctorId == doctor.Id && s.WorkDate == date && s.TimeSlot == timeSlot))
+                        continue;
+
+                    context.DoctorSchedules.Add(new DoctorSchedule
+                    {
+                        DoctorId = doctor.Id,
+                        WorkDate = date,
+                        Shift = shift,
+                        TimeSlot = timeSlot,
+                        IsAvailable = true
+                    });
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedLegacyDoctorDirectory(ApplicationDbContext context)
+        {
+            var doctors = await context.Doctors
+                .Include(d => d.User)
+                .Include(d => d.Specialty)
+                .Where(d => d.IsActive)
+                .ToListAsync();
+
+            foreach (var doctor in doctors)
+            {
+                if (doctor.User == null || doctor.Specialty == null)
+                    continue;
+
+                var legacySpecialty = await context.ChuyenKhoas
+                    .FirstOrDefaultAsync(s => s.TenChuyenKhoa == doctor.Specialty.Name);
+                if (legacySpecialty == null)
+                {
+                    legacySpecialty = new ChuyenKhoa
+                    {
+                        TenChuyenKhoa = doctor.Specialty.Name,
+                        MoTa = doctor.Specialty.Description,
+                        TrangThai = "active"
+                    };
+                    context.ChuyenKhoas.Add(legacySpecialty);
+                    await context.SaveChangesAsync();
+                }
+
+                var legacyDoctor = await context.BacSis
+                    .FirstOrDefaultAsync(d => d.ApplicationUserId == doctor.UserId);
+                if (legacyDoctor != null)
+                    continue;
+
+                context.BacSis.Add(new BacSi
+                {
+                    NguoiDungId = 0,
+                    ApplicationUserId = doctor.UserId,
+                    ChuyenKhoaId = legacySpecialty.Id,
+                    HocVi = doctor.Degree,
+                    KinhNghiem = doctor.YearsOfExperience.ToString(),
+                    GiaKham = doctor.ConsultationFee,
+                    Rating = 5,
+                    SoLuongDanhGia = 1,
+                    HoTen = doctor.FullName,
+                    SoDienThoai = doctor.User.PhoneNumber,
+                    Email = doctor.User.Email
+                });
+            }
+
+            await context.SaveChangesAsync();
         }
     }
 }

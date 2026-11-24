@@ -1,9 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace DatLichKhamBenh.Models.ViewModels
 {
     public class KhamBenhViewModel
     {
         public int LichHenId { get; set; }
+        [Required(ErrorMessage = "Vui lòng nhập kết quả lâm sàng.")]
         public string? KetQuaLamSang { get; set; }
+        [Required(ErrorMessage = "Vui lòng nhập chẩn đoán.")]
         public string? ChanDoan { get; set; }
         public string? LoiDan { get; set; }
         

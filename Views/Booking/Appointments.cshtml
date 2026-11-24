@@ -1,11 +1,11 @@
-@model IEnumerable<DatLichKhamBenh.Models.Entities.LichHen>
+@model IEnumerable<DatLichKhamBenh.Models.Entities.Appointment>
 @using DatLichKhamBenh.Models.Enums
 @{
     ViewData["Title"] = "Lịch sử khám";
     var minDate = DateTime.Today.ToString("yyyy-MM-dd");
     var maxDate = DateTime.Today.AddDays(14).ToString("yyyy-MM-dd");
     var currentFilter = ViewBag.TrangThaiLoc as string;
-    var danhSachLichHen = Model ?? Enumerable.Empty<DatLichKhamBenh.Models.Entities.LichHen>();
+    var danhSachLichHen = Model ?? Enumerable.Empty<DatLichKhamBenh.Models.Entities.Appointment>();
     var successMsg = TempData["SuccessMessage"] ?? TempData["Success"];
     var errorMsg = TempData["ErrorMessage"] ?? TempData["Error"];
 }
@@ -331,15 +331,13 @@
                 <tbody>
                     @foreach (var item in danhSachLichHen)
                     {
-                        var doc = item.BacSiThongTin;
-                        var tenBs = !string.IsNullOrWhiteSpace(doc?.HoTen)
-                            ? doc!.HoTen
-                            : (doc?.ApplicationUser?.FullName ?? doc?.ApplicationUser?.Email ?? doc?.ApplicationUser?.UserName ?? $"Bác sĩ #{item.BacSiId}");
-                        var tenHienThi = string.IsNullOrWhiteSpace(doc?.HocVi) ? tenBs : $"{doc!.HocVi} - {tenBs}";
-                        var tenKhoa = doc?.ChuyenKhoa?.TenChuyenKhoa ?? "Chưa phân khoa";
-                        var giaKham = (doc?.GiaKham > 0 ? doc.GiaKham : 200000m).ToString("N0") + " đ";
-                        var ngayFormatted = item.NgayKham.ToString("dd/MM/yyyy");
-                        var trangThaiText = item.TrangThai ?? "";
+                        var doc = item.Doctor;
+                        var tenBs = doc?.FullName ?? doc?.User?.FullName ?? doc?.User?.Email ?? $"Bác sĩ #{item.DoctorId}";
+                        var tenHienThi = string.IsNullOrWhiteSpace(doc?.Degree) ? tenBs : $"{doc.Degree} - {tenBs}";
+                        var tenKhoa = doc?.Specialty?.Name ?? "Chưa phân khoa";
+                        var giaKham = item.ConsultationFee.ToString("N0") + " đ";
+                        var ngayFormatted = item.AppointmentDate.ToString("dd/MM/yyyy");
+                        var trangThaiText = item.Status ?? "";
                         var choPhepThaoTac = trangThaiText == "ChoXacNhan"
                             || trangThaiText == "DaXacNhan"
                             || trangThaiText == "Chờ xác nhận"
@@ -351,9 +349,9 @@
                             <td>@tenKhoa</td>
                             <td>
                                 <div class="fw-semibold">@ngayFormatted</div>
-                                <div class="small text-muted">@item.KhungGio</div>
+                                <div class="small text-muted">@item.TimeSlot</div>
                             </td>
-                            <td>@(item.GhiChu ?? item.TrieuChungThucThe)</td>
+                            <td>@(item.Notes ?? item.Symptoms)</td>
                             <td><strong style="color: var(--pink-main);">@giaKham</strong></td>
                             <td>
                                 <span class="status-badge">@trangThaiText</span>

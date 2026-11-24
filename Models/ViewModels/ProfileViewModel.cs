@@ -35,5 +35,21 @@ namespace DatLichKhamBenh.Models.ViewModels
         [DataType(DataType.Date)]
         [Display(Name = "Ngày sinh")]
         public DateTime? DateOfBirth { get; set; }
+
+        [StringLength(100)]
+        [Display(Name = "Học vị / Chức danh")]
+        public string? Degree { get; set; }
+
+        [Range(0, 60, ErrorMessage = "Số năm kinh nghiệm phải từ 0 đến 60")]
+        [Display(Name = "Số năm kinh nghiệm")]
+        public int YearsOfExperience { get; set; }
+
+        [Range(typeof(decimal), "0", "100000000", ErrorMessage = "Giá khám không hợp lệ")]
+        [Display(Name = "Giá khám gốc")]
+        public decimal ConsultationFee { get; set; }
+
+        [StringLength(200)]
+        [Display(Name = "Nơi công tác")]
+        public string? Workplace { get; set; }
     }
 }

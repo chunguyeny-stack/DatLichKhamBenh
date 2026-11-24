@@ -11,7 +11,7 @@
     int countSang = ViewBag.CountSang ?? 0;
     int countChieu = ViewBag.CountChieu ?? 0;
     int countToi = ViewBag.CountToi ?? 0;
-    string cloverLogoUrl = Url.Content("~/static/images/logo-clover.png");
+    string cloverLogoUrl = Url.Content("~/images/logo.png");
 
     string urlTongQuan = Url.Action("Index", "dashboard_le_tan", new { area = "Receptionist" }) ?? "/Receptionist/dashboard_le_tan";
     string urlQuanLyLichHen = Url.Action("Index", "quan_ly_lich_hen_BN", new { area = "Receptionist" }) ?? "/Receptionist/quan_ly_lich_hen_BN";
@@ -27,8 +27,9 @@
     <title>MediSlot - Dashboard Lễ Tân</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="~/static/css/LT_BS.css" asp-append-version="true">
+    <link rel="stylesheet" href="~/css/LT_BS.css" asp-append-version="true">
     <style>
+        footer { display: none !important; }
         :root {
             --bg-body: #f4f7fb;
             --bg-card: #ffffff;
@@ -169,9 +170,10 @@
                     <div class="user-role">Lễ tân</div>
                 </div>
             </div>
-            <button type="button" class="logout-btn" onclick="window.location.href='/Account/Login'" title="Đăng xuất">
-                <i class="fas fa-sign-out-alt"></i>
-            </button>
+            <form action="/Account/Logout" method="post" class="m-0">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="logout-btn" title="Đăng xuất"><i class="fas fa-sign-out-alt"></i></button>
+            </form>
         </div>
     </header>
 
@@ -261,33 +263,6 @@
         </div>
     </main>
 
-    <footer>
-        <div>
-            <div class="footer-logo">
-                <div class="brand-clover">
-                    <img src="@cloverLogoUrl" alt="MediSlot" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" />
-                    <svg viewBox="0 0 100 100" style="display:none;">
-                        <path d="M46 46 C46 28, 22 24, 16 38 C12 48, 26 56, 46 46 Z" fill="#cfa0e3" />
-                        <path d="M54 46 C54 28, 78 24, 84 38 C88 48, 74 56, 54 46 Z" fill="#77b82a" />
-                        <path d="M46 54 C46 72, 22 76, 16 62 C12 52, 26 44, 46 54 Z" fill="#239be7" />
-                        <path d="M54 54 C54 72, 78 76, 84 62 C88 52, 74 44, 54 54 Z" fill="none" stroke="#e5a9b5" stroke-width="4" />
-                    </svg>
-                </div>
-                <div class="logo-text">
-                    <h1 class="brand-title">MediSlot</h1>
-                    <p>Cổng Lễ Tân</p>
-                </div>
-            </div>
-            <p>Hệ thống quản lý y tế MediSlot - Giải pháp toàn diện cho bệnh viện và phòng khám.</p>
-            <p><strong>"MediSlot chúc quý khách và gia đình luôn có một sức khỏe dồi dào!"</strong></p>
-        </div>
-        <div>
-            <h4>Thông tin liên hệ</h4>
-            <p>Địa chỉ: Số 15, Phố Dịch Vọng Hậu, Quận Cầu Giấy, Hà Nội</p>
-            <p>Hotline: 1900 6868</p>
-            <p>Email: support@medislot.vn</p>
-        </div>
-    </footer>
 
     <script>
         function syncViewportLayout() {

@@ -1,0 +1,52 @@
+@model DatLichKhamBenh.Models.ViewModels.ProfileViewModel
+@{
+    ViewData["Title"] = "Sửa tài khoản";
+}
+
+<section class="admin-user-management">
+    <header class="admin-page-header">
+        <div><span class="admin-page-kicker">Quản lý tài khoản</span><h1 class="admin-page-title">Sửa tài khoản</h1></div>
+    </header>
+    <div class="admin-panel p-4">
+        <form asp-action="EditUser" asp-route-id="@ViewContext.RouteData.Values["id"]" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="mb-3">
+                <label asp-for="MiddleName" class="form-label"></label>
+                <input asp-for="MiddleName" class="form-control"/>
+                <span asp-validation-for="MiddleName" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="FirstName" class="form-label"></label>
+                <input asp-for="FirstName" class="form-control"/>
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="PhoneNumber" class="form-label"></label>
+                <input asp-for="PhoneNumber" class="form-control"/>
+                <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+            </div>
+            @if (ViewBag.IsDoctor == true)
+            {
+                <div class="mb-3">
+                    <label asp-for="Degree" class="form-label"></label>
+                    <input asp-for="Degree" class="form-control"/>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="YearsOfExperience" class="form-label"></label>
+                    <input asp-for="YearsOfExperience" type="number" min="0" max="60" class="form-control"/>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="ConsultationFee" class="form-label"></label>
+                    <input asp-for="ConsultationFee" type="number" min="0" max="100000000" step="1000" class="form-control"/>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Workplace" class="form-label"></label>
+                    <input asp-for="Workplace" class="form-control"/>
+                </div>
+            }
+            <button type="submit" class="admin-create-button">Lưu thay đổi</button>
+            <a asp-action="Index" class="btn btn-secondary ms-2">Hủy</a>
+        </form>
+    </div>
+</section>

@@ -2,6 +2,19 @@
 @{
     ViewData["Title"] = "Thông tin cá nhân";
     Layout = null;
+    var backHomeUrl = "/";
+    if (User.IsInRole("Receptionist"))
+    {
+        backHomeUrl = "/Receptionist/dashboard_le_tan";
+    }
+    else if (User.IsInRole("Doctor"))
+    {
+        backHomeUrl = "/Doctor/Doctor";
+    }
+    else if (User.IsInRole("Admin"))
+    {
+        backHomeUrl = "/Admin/Admin/Dashboard";
+    }
 }
 
 <!DOCTYPE html>
@@ -135,14 +148,14 @@
     else
     {
     <nav class="top-navbar">
-        <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+        <a class="navbar-brand" href="@backHomeUrl">
             <img src="~/images/logo.png" alt="Biểu trưng MediSlot" />
             MediSlot
         </a>
 
         <ul class="navbar-menu">
             <li>
-                <a asp-controller="Home" asp-action="Index">
+                <a href="@backHomeUrl">
                     <i class="bi bi-arrow-left-circle"></i> Trang chủ
                 </a>
             </li>

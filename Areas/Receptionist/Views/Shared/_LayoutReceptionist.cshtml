@@ -9,7 +9,7 @@
 <body>
     <nav class="navbar navbar-dark bg-primary px-3">
         <span class="navbar-brand">MediSlot - Lễ tân</span>
-        <form asp-area="" asp-controller="Account" asp-action="Logout" method="post" class="m-0">
+        <form action="/Account/Logout" method="post" class="m-0">
             @Html.AntiForgeryToken()
             <button class="btn btn-light btn-sm" type="submit">Đăng xuất</button>
         </form>

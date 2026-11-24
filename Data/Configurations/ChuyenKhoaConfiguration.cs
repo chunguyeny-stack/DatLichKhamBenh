@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using MedBooking.Models;
+using DatLichKhamBenh.Models.Entities;
 
-namespace MedBooking.Configurations
+namespace DatLichKhamBenh.Data.Configurations
 {
     public class ChuyenKhoaConfiguration : IEntityTypeConfiguration<ChuyenKhoa>
     {
         public void Configure(EntityTypeBuilder<ChuyenKhoa> builder)
         {
-            builder.ToTable("ChuyenKhoa");
+            builder.ToTable("chuyen_khoa");
             
             builder.HasKey(c => c.Id);
             

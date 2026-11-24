@@ -64,6 +64,34 @@
                         }
                     </select>
                     <span asp-validation-for="SpecialtyId" class="text-danger small"></span>
+
+                    <div class="row mt-3">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="PhoneNumber" class="form-label fw-bold"></label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="Ví dụ: 0912345678" />
+                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Degree" class="form-label fw-bold"></label>
+                            <input asp-for="Degree" class="form-control" placeholder="Ví dụ: Bác sĩ CKI" />
+                            <span asp-validation-for="Degree" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="YearsOfExperience" class="form-label fw-bold"></label>
+                            <input asp-for="YearsOfExperience" type="number" min="0" max="60" class="form-control" />
+                            <span asp-validation-for="YearsOfExperience" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="ConsultationFee" class="form-label fw-bold"></label>
+                            <input asp-for="ConsultationFee" type="number" min="0" step="1000" class="form-control" />
+                            <span asp-validation-for="ConsultationFee" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label asp-for="Workplace" class="form-label fw-bold"></label>
+                            <input asp-for="Workplace" class="form-control" placeholder="Ví dụ: MediSlot" />
+                            <span asp-validation-for="Workplace" class="text-danger small"></span>
+                        </div>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-submit"><i class="bi bi-save"></i> Tạo tài khoản</button>
@@ -82,5 +110,6 @@
                     specialtyGroup.style.display = 'none';
                 }
             });
+            document.getElementById('roleSelect').dispatchEvent(new Event('change'));
         </script>
     }

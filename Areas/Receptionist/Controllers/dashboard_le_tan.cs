@@ -80,5 +80,6 @@ namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 
         [HttpGet]
         public IActionResult HoSoCaNhan() => RedirectToAction("Index", "ho_so_ca_nhan_le_tan", new { area = "Receptionist" });
+
     }
 }

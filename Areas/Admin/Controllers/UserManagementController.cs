@@ -48,7 +48,9 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var users = await _userManager.Users.ToListAsync();
+            var users = await _userManager.Users
+                .Where(u => u.IsActive)
+                .ToListAsync();
             var userRoles = new Dictionary<string, string>();
 
             foreach (var user in users)
@@ -59,6 +61,106 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
 
             ViewBag.UserRoles = userRoles;
             return View(users);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteUser(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest();
+
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
+            {
+                TempData["WarningMessage"] = "Không thể chuyển tài khoản quản trị viên vào thùng rác.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            user.IsActive = false;
+            user.LockoutEnd = DateTimeOffset.MaxValue;
+            await _userManager.UpdateAsync(user);
+            await _authService.LogActionAsync(
+                _userManager.GetUserId(User)!,
+                "MoveToRecycleBin",
+                user.Id,
+                $"Chuyển tài khoản {user.Email} vào thùng rác");
+
+            TempData["SuccessMessage"] = "Đã chuyển tài khoản vào thùng rác.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RestoreUser(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            user.IsActive = true;
+            user.LockoutEnd = null;
+            await _userManager.UpdateAsync(user);
+            await _authService.LogActionAsync(
+                _userManager.GetUserId(User)!,
+                "RestoreUser",
+                user.Id,
+                $"Khôi phục tài khoản {user.Email}");
+
+            TempData["SuccessMessage"] = "Đã khôi phục tài khoản.";
+            return RedirectToAction("Index", "RecycleBin");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> PermanentlyDeleteUser(string id)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
+            {
+                TempData["WarningMessage"] = "Không thể xóa vĩnh viễn tài khoản quản trị viên.";
+                return RedirectToAction("Index", "RecycleBin");
+            }
+
+            var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == user.Id);
+            if (doctor != null)
+            {
+                var appointments = await _context.Appointments.Where(a => a.DoctorId == doctor.Id).ToListAsync();
+                var schedules = await _context.DoctorSchedules.Where(s => s.DoctorId == doctor.Id).ToListAsync();
+                _context.Appointments.RemoveRange(appointments);
+                _context.DoctorSchedules.RemoveRange(schedules);
+                _context.Doctors.Remove(doctor);
+            }
+
+            var patient = await _context.Patients.FirstOrDefaultAsync(p => p.UserId == user.Id);
+            if (patient != null)
+            {
+                var appointments = await _context.Appointments.Where(a => a.PatientId == patient.Id).ToListAsync();
+                _context.Appointments.RemoveRange(appointments);
+                _context.Patients.Remove(patient);
+            }
+
+            await _context.SaveChangesAsync();
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+            {
+                TempData["WarningMessage"] = "Xóa vĩnh viễn tài khoản thất bại.";
+                return RedirectToAction("Index", "RecycleBin");
+            }
+
+            await _authService.LogActionAsync(
+                _userManager.GetUserId(User)!,
+                "PermanentDeleteUser",
+                user.Id,
+                $"Xóa vĩnh viễn tài khoản {user.Email}");
+            TempData["SuccessMessage"] = "Đã xóa vĩnh viễn tài khoản.";
+            return RedirectToAction("Index", "RecycleBin");
         }
 
         // 2. TẠO TÀI KHOẢN NHÂN SỰ
@@ -122,8 +224,10 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                 UserName = model.Email,
                 Email = model.Email,
                 FullName = fullName,
+                PhoneNumber = model.Role == "Doctor" ? model.PhoneNumber?.Trim() : null,
                 IsActive = true,
                 EmailConfirmed = true,
+                MustChangePassword = model.Role != "Patient",
                 LockoutEnabled = true
             };
 
@@ -156,6 +260,10 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                     UserId = user.Id,
                     SpecialtyId = model.SpecialtyId!.Value,
                     FullName = fullName,
+                    Degree = model.Degree?.Trim(),
+                    YearsOfExperience = model.YearsOfExperience,
+                    Workplace = model.Workplace?.Trim(),
+                    ConsultationFee = model.ConsultationFee,
                     IsActive = true,
                     CreatedAt = DateTime.Now
                 });
@@ -182,6 +290,78 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             else
                 TempData["WarningMessage"] = $"Đã tạo tài khoản {model.Role}, nhưng gửi email thất bại. Hãy thông báo mật khẩu khởi tạo qua kênh bảo mật.";
 
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditUser(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return NotFound();
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            var model = new ProfileViewModel
+            {
+                MiddleName = user.MiddleName,
+                FirstName = user.FirstName,
+                Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber
+            };
+
+            var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == id);
+            if (doctor != null)
+            {
+                model.Degree = doctor.Degree;
+                model.YearsOfExperience = doctor.YearsOfExperience;
+                model.ConsultationFee = doctor.ConsultationFee;
+                model.Workplace = doctor.Workplace;
+                ViewBag.IsDoctor = true;
+            }
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditUser(string id, ProfileViewModel model)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null)
+                return NotFound();
+            var doctor = await _context.Doctors.FirstOrDefaultAsync(d => d.UserId == id);
+            if (doctor != null)
+                ViewBag.IsDoctor = true;
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var fullName = $"{model.MiddleName} {model.FirstName}".Trim();
+            user.FullName = string.IsNullOrWhiteSpace(fullName) ? user.Email ?? "Người dùng" : fullName;
+            user.PhoneNumber = model.PhoneNumber?.Trim();
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError(string.Empty, error.Description);
+                return View(model);
+            }
+
+            if (doctor != null)
+            {
+                ViewBag.IsDoctor = true;
+                doctor.Degree = model.Degree?.Trim();
+                doctor.YearsOfExperience = model.YearsOfExperience;
+                doctor.ConsultationFee = model.ConsultationFee;
+                doctor.Workplace = model.Workplace?.Trim();
+                await _context.SaveChangesAsync();
+            }
+
+            await _authService.LogActionAsync(
+                _userManager.GetUserId(User)!,
+                "EditUser",
+                user.Id,
+                $"Cập nhật thông tin tài khoản {user.Email}");
+            TempData["SuccessMessage"] = "Đã cập nhật tài khoản.";
             return RedirectToAction(nameof(Index));
         }
 

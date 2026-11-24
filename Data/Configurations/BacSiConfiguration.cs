@@ -1,14 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using MedBooking.Models;
+using DatLichKhamBenh.Models.Entities;
 
-namespace MedBooking.Configurations
+namespace DatLichKhamBenh.Data.Configurations
 {
     public class BacSiConfiguration : IEntityTypeConfiguration<BacSi>
     {
         public void Configure(EntityTypeBuilder<BacSi> builder)
         {
-            builder.ToTable("BacSi");
+            builder.ToTable("bac_si");
             
             builder.HasKey(b => b.Id);
             
@@ -29,11 +29,6 @@ namespace MedBooking.Configurations
                 .IsRequired()
                 .OnDelete(DeleteBehavior.Restrict);
             
-            // Quan hệ: 1-N với LichKham
-            builder.HasMany(b => b.LichKhams)
-                .WithOne(l => l.BacSi)
-                .HasForeignKey(l => l.BacSiId)
-                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

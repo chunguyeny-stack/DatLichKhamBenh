@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DatLichKhamBenh.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Patient")]
     public class BookingController(
         ApplicationDbContext context,
         UserManager<ApplicationUser> userManager) : Controller
@@ -35,15 +35,16 @@ namespace DatLichKhamBenh.Controllers
 
             if (doctorId is > 0)
             {
-                var selectedDoctor = await context.BacSis
+                var selectedDoctor = await context.Doctors
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(b => b.Id == doctorId.Value);
+                    .Include(d => d.Specialty)
+                    .FirstOrDefaultAsync(d => d.Id == doctorId.Value && d.IsActive);
 
                 if (selectedDoctor != null)
                 {
-                    model.BacSiId = selectedDoctor.Id;
-                    model.ChuyenKhoaId = selectedDoctor.ChuyenKhoaId;
-                    model.PhiCoBan = selectedDoctor.GiaKham > 0 ? selectedDoctor.GiaKham : GiaKhamMacDinh;
+                        model.BacSiId = selectedDoctor.Id;
+                        model.ChuyenKhoaId = selectedDoctor.SpecialtyId;
+                        model.PhiCoBan = selectedDoctor.ConsultationFee > 0 ? selectedDoctor.ConsultationFee : GiaKhamMacDinh;
                 }
             }
             else if (chuyenKhoaId is > 0)
@@ -68,20 +69,42 @@ namespace DatLichKhamBenh.Controllers
                     $"Chỉ được đặt lịch từ {minDate:dd/MM/yyyy} đến {maxDate:dd/MM/yyyy} (giới hạn 14 ngày).");
             }
 
-            var bacSi = await context.BacSis.FirstOrDefaultAsync(b => b.Id == model.BacSiId);
+            var bacSi = await context.Doctors
+                .Include(d => d.User)
+                .FirstOrDefaultAsync(d => d.Id == model.BacSiId && d.IsActive);
             if (bacSi == null)
             {
                 ModelState.AddModelError(nameof(model.BacSiId), "Vui lòng chọn bác sĩ hợp lệ.");
             }
 
-            if (bacSi != null && !string.IsNullOrWhiteSpace(model.KhungGio))
+            var doctor = bacSi == null
+                ? null
+                : bacSi;
+            if (bacSi != null && doctor == null)
             {
-                var daCoLich = await context.LichHens.AnyAsync(l =>
-                    l.BacSiId == model.BacSiId &&
-                    l.NgayKham.Date == model.NgayKham.Date &&
-                    l.KhungGio == model.KhungGio &&
-                    l.TrangThai != "Đã hủy" &&
-                    l.TrangThai != "DaHuy");
+                ModelState.AddModelError(nameof(model.BacSiId), "Bác sĩ hiện chưa thể nhận lịch khám.");
+            }
+
+            if (doctor != null && !string.IsNullOrWhiteSpace(model.KhungGio))
+            {
+                var coLichLamViec = await context.DoctorSchedules.AnyAsync(s =>
+                    s.DoctorId == doctor.Id
+                    && s.WorkDate.Date == model.NgayKham.Date
+                    && s.TimeSlot == model.KhungGio
+                    && s.IsAvailable
+                    && string.IsNullOrEmpty(s.AbsenceReason));
+                if (!coLichLamViec)
+                {
+                    ModelState.AddModelError(nameof(model.KhungGio),
+                        "Bác sĩ không có lịch làm việc ở khung giờ này. Vui lòng chọn khung giờ khác.");
+                }
+
+                var daCoLich = await context.Appointments.AnyAsync(a =>
+                    a.DoctorId == doctor.Id &&
+                    a.AppointmentDate.Date == model.NgayKham.Date &&
+                    a.TimeSlot == model.KhungGio &&
+                    a.Status != "Đã hủy" &&
+                    a.Status != "Cancelled");
 
                 if (daCoLich)
                 {
@@ -102,37 +125,37 @@ namespace DatLichKhamBenh.Controllers
                 return Challenge();
             }
 
-            var benhNhan = await context.BenhNhans.FirstOrDefaultAsync(bn => bn.UserId == userId);
+            var user = await userManager.GetUserAsync(User);
+            var benhNhan = await context.Patients.FirstOrDefaultAsync(bn => bn.UserId == userId);
             if (benhNhan == null)
             {
-                benhNhan = new BenhNhan { UserId = userId };
-                context.BenhNhans.Add(benhNhan);
+                benhNhan = new Patient
+                {
+                    UserId = userId,
+                    FullName = user?.FullName ?? user?.Email ?? "Bệnh nhân",
+                    PhoneNumber = user?.PhoneNumber,
+                    Email = user?.Email
+                };
+                context.Patients.Add(benhNhan);
                 await context.SaveChangesAsync();
             }
 
-            var dichVuId = await context.DichVus
-                               .Where(dv => bacSi != null && dv.ChuyenKhoaId == bacSi.ChuyenKhoaId && dv.DangHoatDong)
-                               .Select(dv => (int?)dv.Id)
-                               .FirstOrDefaultAsync()
-                           ?? await context.DichVus.Select(dv => (int?)dv.Id).FirstOrDefaultAsync()
-                           ?? 1;
-
-            var giaGoc = bacSi is { GiaKham: > 0 } ? bacSi.GiaKham : GiaKhamMacDinh;
+            var giaGoc = bacSi is { ConsultationFee: > 0 } ? bacSi.ConsultationFee : GiaKhamMacDinh;
             var tongPhi = model.CaKham == CaKham.Toi ? Math.Round(giaGoc * 1.1m, 0) : giaGoc;
 
-            var lichHen = new LichHen
+            var lichHen = new Appointment
             {
-                BenhNhanId = benhNhan.Id,
-                BacSiId = model.BacSiId,
-                DichVuId = dichVuId,
-                NgayKham = model.NgayKham.Date,
-                KhungGio = $"[{model.CaKham}] {model.KhungGio.Trim()}",
-                TrangThai = "Chờ duyệt",
-                GhiChu = model.GhiChu.Trim(),
-                CreatedAt = DateTime.Now
+                PatientId = benhNhan.Id,
+                DoctorId = doctor!.Id,
+                AppointmentDate = model.NgayKham.Date,
+                TimeSlot = model.KhungGio.Trim(),
+                Symptoms = model.GhiChu.Trim(),
+                Status = "Chờ xác nhận",
+                Notes = $"Đặt bởi bệnh nhân lúc {DateTime.Now:dd/MM/yyyy HH:mm}",
+                ConsultationFee = tongPhi
             };
 
-            context.LichHens.Add(lichHen);
+            context.Appointments.Add(lichHen);
             await context.SaveChangesAsync();
 
             TempData["Success"] =
@@ -149,29 +172,30 @@ namespace DatLichKhamBenh.Controllers
 
         private async Task NapDuLieuFormAsync(DatLichViewModel model)
         {
-            model.ChuyenKhoas = await context.ChuyenKhoas
+            model.ChuyenKhoas = await context.Specialties
                 .AsNoTracking()
-                .Where(ck => ck.TrangThai == "active")
-                .OrderBy(ck => ck.TenChuyenKhoa)
+                .Where(s => s.IsActive)
+                .OrderBy(s => s.Name)
                 .ToListAsync();
 
-            var query = context.BacSis
+            var query = context.Doctors
                 .AsNoTracking()
-                .Include(b => b.ChuyenKhoa)
-                .Include(b => b.ApplicationUser)
+                .Include(d => d.Specialty)
+                .Include(d => d.User)
+                .Where(d => d.IsActive)
                 .AsQueryable();
 
             if (model.ChuyenKhoaId is > 0)
             {
-                query = query.Where(b => b.ChuyenKhoaId == model.ChuyenKhoaId.Value);
+                query = query.Where(d => d.SpecialtyId == model.ChuyenKhoaId.Value);
             }
 
             model.BacSis = await query
-                .OrderByDescending(b => b.Rating)
+                .OrderBy(d => d.FullName)
                 .ToListAsync();
 
-            var bacSiChon = model.BacSis.FirstOrDefault(b => b.Id == model.BacSiId);
-            var giaGoc = bacSiChon is { GiaKham: > 0 } ? bacSiChon.GiaKham : model.PhiCoBan;
+            var bacSiChon = model.BacSis.FirstOrDefault(d => d.Id == model.BacSiId);
+            var giaGoc = bacSiChon is { ConsultationFee: > 0 } ? bacSiChon.ConsultationFee : model.PhiCoBan;
             if (giaGoc <= 0) giaGoc = GiaKhamMacDinh;
 
             model.PhiCoBan = giaGoc;

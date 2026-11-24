@@ -1,5 +1,6 @@
 @{
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -22,8 +23,14 @@
 
         <ul class="navbar-menu">
             <li>
+                <a asp-area="Admin" asp-controller="Admin" asp-action="Dashboard"
+                   class="@(currentController == "Admin" ? "active" : "")">
+                    Trang chủ
+                </a>
+            </li>
+            <li>
                 <a asp-area="Admin" asp-controller="UserManagement" asp-action="Index"
-                   class="@(currentAction == "CreateStaff" ? "" : "active")">
+                   class="@(currentController == "UserManagement" && currentAction == "Index" ? "active" : "")">
                     Quản lý người dùng
                 </a>
             </li>
@@ -31,6 +38,24 @@
                 <a asp-area="Admin" asp-controller="UserManagement" asp-action="CreateStaff"
                    class="@(currentAction == "CreateStaff" ? "active" : "")">
                     Tạo tài khoản
+                </a>
+            </li>
+            <li>
+                <a asp-area="Admin" asp-controller="SpecialtyManager" asp-action="Index"
+                   class="@(currentController == "SpecialtyManager" ? "active" : "")">
+                    Chuyên khoa
+                </a>
+            </li>
+            <li>
+                <a asp-area="Admin" asp-controller="RecycleBin" asp-action="Index"
+                   class="@(currentController == "RecycleBin" ? "active" : "")">
+                    Thùng rác
+                </a>
+            </li>
+            <li>
+                <a asp-area="Admin" asp-controller="AuditLog" asp-action="Index"
+                   class="@(currentController == "AuditLog" ? "active" : "")">
+                    Nhật ký
                 </a>
             </li>
             <li>

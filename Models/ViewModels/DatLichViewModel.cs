@@ -35,7 +35,7 @@ namespace DatLichKhamBenh.Models.ViewModels
         public decimal PhiCoBan { get; set; } = 200000m;
         public decimal TongPhi { get; set; } = 200000m;
 
-        public List<ChuyenKhoa> ChuyenKhoas { get; set; } = [];
-        public List<BacSi> BacSis { get; set; } = [];
+        public List<Specialty> ChuyenKhoas { get; set; } = [];
+        public List<Doctor> BacSis { get; set; } = [];
     }
 }

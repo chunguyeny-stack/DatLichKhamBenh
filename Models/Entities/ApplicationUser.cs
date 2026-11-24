@@ -59,7 +59,6 @@ namespace DatLichKhamBenh.Models.Entities
         [Display(Name = "Lý do khóa")]
         public string? LockoutReason { get; set; }
 
-        [NotMapped]
         [Display(Name = "Phải đổi mật khẩu")]
         public bool MustChangePassword { get; set; }
 

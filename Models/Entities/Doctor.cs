@@ -55,6 +55,7 @@ namespace DatLichKhamBenh.Models.Entities
         public string? Workplace { get; set; }
 
         [Column("ConsultationFee", TypeName = "decimal(18, 2)")]
+        [Range(typeof(decimal), "0", "100000000", ErrorMessage = "Giá khám gốc không hợp lệ")]
         [Display(Name = "Phí khám")]
         public decimal ConsultationFee { get; set; }
 

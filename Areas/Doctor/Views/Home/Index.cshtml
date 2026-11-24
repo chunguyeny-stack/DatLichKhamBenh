@@ -1,52 +1,66 @@
+@model IReadOnlyList<DatLichKhamBenh.Models.Entities.Appointment>
 @{
     ViewData["Title"] = "Dashboard Bác sĩ";
     Layout = "~/Areas/Doctor/Views/Shared/_LayoutDoctor.cshtml";
 }
 
-<!-- Thêm lời chào -->
-<div style="margin-bottom: 20px;">
-    <h2 style="font-weight: 600; color: var(--primary-dark);">Xin chào, @(ViewBag.FullName ?? "Bác sĩ")!</h2>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Xin chào, @(ViewBag.FullName ?? "Bác sĩ")!</h2>
+        <p class="text-muted mb-0">Danh sách lịch hẹn được lễ tân xác nhận.</p>
+    </div>
+    <span class="badge bg-light text-dark border p-2">@DateTime.Today.ToString("dd/MM/yyyy")</span>
 </div>
 
-<div class="card">
-    <div class="card-title">
-        <i class="fas fa-clock"></i> Danh sách bệnh nhân chờ khám
-    </div>
-    
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Giờ hẹn</th>
-                <th>Mã LH</th>
-                <th>Bệnh nhân</th>
-                <th>Triệu chứng</th>
-                <th>Thao tác</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Dữ liệu giả lập, sau này sẽ load từ Database -->
-            <tr>
-                <td>08:30</td>
-                <td>LH001</td>
-                <td>Nguyễn Văn A</td>
-                <td>Đau họng, sốt</td>
-                <td>
-                    <a href="/Doctor/Examination/Index?id=1" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">
-                        <i class="fas fa-stethoscope"></i> Khám bệnh
-                    </a>
-                </td>
-            </tr>
-            <tr>
-                <td>09:00</td>
-                <td>LH002</td>
-                <td>Trần Thị B</td>
-                <td>Đau đầu, chóng mặt</td>
-                <td>
-                    <a href="/Doctor/Examination/Index?id=2" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">
-                        <i class="fas fa-stethoscope"></i> Khám bệnh
-                    </a>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-warning">@TempData["Error"]</div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-4"><div class="card p-3 h-100"><small class="text-muted">Tổng lịch chưa hoàn thành</small><strong class="fs-3">@Model.Count</strong></div></div>
+    <div class="col-sm-4"><div class="card p-3 h-100"><small class="text-muted">Chờ lễ tân xác nhận</small><strong class="fs-3">@ViewBag.WaitingCount</strong></div></div>
+    <div class="col-sm-4"><div class="card p-3 h-100"><small class="text-muted">Bệnh nhân đã đến</small><strong class="fs-3">@ViewBag.CheckedInCount</strong></div></div>
 </div>
+
+<section class="card">
+    <h3 class="card-title"><i class="fas fa-clock"></i> Lịch hẹn bệnh nhân</h3>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr><th>Ngày / giờ</th><th>Mã lịch</th><th>Bệnh nhân</th><th>Triệu chứng</th><th>Trạng thái</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var appointment in Model)
+                {
+                    var checkedIn = appointment.Status == "Đã đến";
+                    <tr>
+                        <td>@appointment.AppointmentDate.ToString("dd/MM/yyyy")<br><span class="text-muted">@appointment.TimeSlot</span></td>
+                        <td>@($"LH{appointment.Id:D3}")</td>
+                        <td>@(appointment.Patient?.FullName ?? "Bệnh nhân")</td>
+                        <td>@appointment.Symptoms</td>
+                        <td><span class="badge @(checkedIn ? "bg-success" : "bg-warning text-dark")">@appointment.Status</span></td>
+                        <td>
+                            @if (checkedIn)
+                            {
+                                <a href="/Doctor/Examination/Index?id=@appointment.Id" class="btn btn-primary btn-sm">Khám bệnh</a>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Chờ bệnh nhân check-in</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (Model.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-center text-muted py-4">Chưa có lịch hẹn phù hợp.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

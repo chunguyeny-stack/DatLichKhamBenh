@@ -15,7 +15,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261122044358_GopCode_InitSqlite";
+    public override string LastMigrationId => "20261123072325_AppointmentFlowModelSync";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -34,9 +34,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .IsConcurrencyToken()
                     .HasColumnType("TEXT");
 
-                b.Property<DateTime?>("DateOfBirth")
-                    .HasColumnType("TEXT");
-
                 b.Property<string>("Email")
                     .HasMaxLength(256)
                     .HasColumnType("TEXT");
@@ -44,22 +41,20 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Property<bool>("EmailConfirmed")
                     .HasColumnType("INTEGER");
 
-                b.Property<string>("FirstName")
-                    .HasMaxLength(50)
-                    .HasColumnType("TEXT");
+                b.Property<string>("FullName")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("FullName");
+
+                b.Property<bool>("IsActive")
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("IsActive");
 
                 b.Property<bool>("LockoutEnabled")
                     .HasColumnType("INTEGER");
 
                 b.Property<DateTimeOffset?>("LockoutEnd")
-                    .HasColumnType("TEXT");
-
-                b.Property<string>("LockoutReason")
-                    .HasMaxLength(500)
-                    .HasColumnType("TEXT");
-
-                b.Property<string>("MiddleName")
-                    .HasMaxLength(50)
                     .HasColumnType("TEXT");
 
                 b.Property<bool>("MustChangePassword")
@@ -102,6 +97,69 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasDatabaseName("UserNameIndex");
 
                 b.ToTable("AspNetUsers");
+            });
+
+        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Appointment", b =>
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("Id");
+
+                b.Property<DateTime>("AppointmentDate")
+                    .HasColumnType("date")
+                    .HasColumnName("AppointmentDate");
+
+                b.Property<decimal>("ConsultationFee")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18, 2)")
+                    .HasColumnName("ConsultationFee");
+
+                b.Property<int>("DoctorId")
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("DoctorId");
+
+                b.Property<decimal>("MedicineFee")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18, 2)")
+                    .HasColumnName("MedicineFee");
+
+                b.Property<string>("Notes")
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Notes");
+
+                b.Property<int>("PatientId")
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("PatientId");
+
+                b.Property<decimal>("ServiceFee")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18, 2)")
+                    .HasColumnName("ServiceFee");
+
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Status");
+
+                b.Property<string>("Symptoms")
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Symptoms");
+
+                b.Property<string>("TimeSlot")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("TimeSlot");
+
+                b.HasKey("Id");
+
+                b.HasIndex("DoctorId");
+
+                b.HasIndex("PatientId");
+
+                b.ToTable("Appointment");
             });
 
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.AuditLog", b =>
@@ -257,80 +315,60 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("chuyen_khoa");
             });
 
-        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.DichVu", b =>
-            {
-                b.Property<int>("Id")
-                    .ValueGeneratedOnAdd()
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("id");
-
-                b.Property<int>("ChuyenKhoaId")
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("chuyen_khoa_id");
-
-                b.Property<bool>("DangHoatDong")
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("dang_hoat_dong");
-
-                b.Property<decimal>("GiaTien")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("gia_tien");
-
-                b.Property<string>("MoTa")
-                    .IsRequired()
-                    .HasColumnType("TEXT")
-                    .HasColumnName("mo_ta");
-
-                b.Property<string>("TenDichVu")
-                    .IsRequired()
-                    .HasColumnType("TEXT")
-                    .HasColumnName("ten_dich_vu");
-
-                b.Property<string>("TrangThai")
-                    .IsRequired()
-                    .HasColumnType("TEXT")
-                    .HasColumnName("trang_thai");
-
-                b.HasKey("Id");
-
-                b.HasIndex("ChuyenKhoaId");
-
-                b.ToTable("dich_vu");
-            });
-
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Doctor", b =>
             {
                 b.Property<int>("Id")
                     .ValueGeneratedOnAdd()
-                    .HasColumnType("INTEGER");
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("Id");
 
                 b.Property<string>("Bio")
                     .HasMaxLength(1000)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Bio");
+
+                b.Property<decimal>("ConsultationFee")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18, 2)")
+                    .HasColumnName("ConsultationFee");
 
                 b.Property<DateTime>("CreatedAt")
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("CreatedAt");
 
                 b.Property<string>("Degree")
                     .HasMaxLength(100)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Degree");
+
+                b.Property<string>("FullName")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("FullName");
 
                 b.Property<bool>("IsActive")
-                    .HasColumnType("INTEGER");
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("IsActive");
 
                 b.Property<int>("SpecialtyId")
-                    .HasColumnType("INTEGER");
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("SpecialtyId");
 
                 b.Property<string>("UserId")
                     .IsRequired()
-                    .HasColumnType("TEXT");
+                    .HasMaxLength(450)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("UserId");
 
                 b.Property<string>("Workplace")
                     .HasMaxLength(200)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Workplace");
 
-                b.Property<int?>("YearsOfExperience")
-                    .HasColumnType("INTEGER");
+                b.Property<int>("YearsOfExperience")
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("YearsOfExperience");
 
                 b.HasKey("Id");
 
@@ -339,7 +377,56 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.HasIndex("UserId")
                     .IsUnique();
 
-                b.ToTable("Doctors");
+                b.ToTable("Doctor");
+            });
+
+        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.DoctorSchedule", b =>
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("Id");
+
+                b.Property<string>("AbsenceReason")
+                    .HasMaxLength(500)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("AbsenceReason");
+
+                b.Property<int>("DoctorId")
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("DoctorId");
+
+                b.Property<bool>("IsAvailable")
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("IsAvailable");
+
+                b.Property<string>("RoomName")
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("RoomName");
+
+                b.Property<string>("Shift")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Shift");
+
+                b.Property<string>("TimeSlot")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("TimeSlot");
+
+                b.Property<DateTime>("WorkDate")
+                    .HasColumnType("date")
+                    .HasColumnName("WorkDate");
+
+                b.HasKey("Id");
+
+                b.HasIndex("DoctorId", "WorkDate", "TimeSlot")
+                    .IsUnique();
+
+                b.ToTable("DoctorSchedule");
             });
 
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.DonThuoc", b =>
@@ -419,186 +506,136 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("ho_so_benh_an");
             });
 
-        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.LichHen", b =>
-            {
-                b.Property<int>("Id")
-                    .ValueGeneratedOnAdd()
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("id");
-
-                b.Property<int?>("BacSiId")
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("bac_si_id");
-
-                b.Property<int>("BenhNhanId")
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("benh_nhan_id");
-
-                b.Property<string>("ChanDoan")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("chan_doan");
-
-                b.Property<DateTime?>("CreatedAt")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("created_at");
-
-                b.Property<int>("DichVuId")
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("dich_vu_id");
-
-                b.Property<string>("DonThuoc")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("don_thuoc");
-
-                b.Property<string>("GhiChu")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("ghi_chu");
-
-                b.Property<string>("KhungGio")
-                    .IsRequired()
-                    .HasColumnType("TEXT")
-                    .HasColumnName("khung_gio");
-
-                b.Property<string>("LoiDan")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("loi_dan");
-
-                b.Property<DateTime>("NgayKham")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("ngay_kham");
-
-                b.Property<string>("ThietBiYTe")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("thiet_bi_y_te");
-
-                b.Property<string>("TrangThai")
-                    .IsRequired()
-                    .HasColumnType("TEXT")
-                    .HasColumnName("trang_thai");
-
-                b.Property<string>("TrieuChungThucThe")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("trieu_chung_thuc_the");
-
-                b.HasKey("Id");
-
-                b.HasIndex("BacSiId");
-
-                b.HasIndex("BenhNhanId");
-
-                b.ToTable("lich_hen");
-            });
-
-        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.LichLamViec", b =>
-            {
-                b.Property<int>("Id")
-                    .ValueGeneratedOnAdd()
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("id");
-
-                b.Property<int>("BacSiId")
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("bac_si_id");
-
-                b.Property<bool>("ConTrong")
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("con_trong");
-
-                b.Property<string>("KhungGio")
-                    .IsRequired()
-                    .HasColumnType("TEXT")
-                    .HasColumnName("khung_gio");
-
-                b.Property<int?>("LeTanMaLeTan")
-                    .HasColumnType("INTEGER")
-                    .HasColumnName("le_tan_ma_le_tan");
-
-                b.Property<string>("LyDoBan")
-                    .IsRequired()
-                    .HasColumnType("TEXT")
-                    .HasColumnName("ly_do_ban");
-
-                b.Property<DateTime>("NgayKham")
-                    .HasColumnType("TEXT")
-                    .HasColumnName("ngay_kham");
-
-                b.Property<string>("TrangThaiChiTiet")
-                    .IsRequired()
-                    .HasColumnType("TEXT")
-                    .HasColumnName("trang_thai_chi_tiet");
-
-                b.HasKey("Id");
-
-                b.HasIndex("BacSiId");
-
-                b.ToTable("lich_lam_viec");
-            });
-
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Patient", b =>
             {
                 b.Property<int>("Id")
                     .ValueGeneratedOnAdd()
-                    .HasColumnType("INTEGER");
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("Id");
 
                 b.Property<string>("Address")
                     .HasMaxLength(200)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Address");
 
                 b.Property<DateTime>("CreatedAt")
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("CreatedAt");
+
+                b.Property<DateTime?>("DateOfBirth")
+                    .HasColumnType("date")
+                    .HasColumnName("DateOfBirth");
+
+                b.Property<string>("Email")
+                    .HasMaxLength(256)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Email");
 
                 b.Property<string>("EmergencyContact")
                     .HasMaxLength(100)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("EmergencyContact");
+
+                b.Property<string>("FullName")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("FullName");
 
                 b.Property<string>("Gender")
                     .HasMaxLength(10)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Gender");
 
                 b.Property<string>("HealthInsuranceNumber")
                     .HasMaxLength(20)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("HealthInsuranceNumber");
 
                 b.Property<bool>("IsActive")
-                    .HasColumnType("INTEGER");
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("IsActive");
 
                 b.Property<string>("MedicalHistory")
                     .HasMaxLength(500)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("MedicalHistory");
+
+                b.Property<string>("PhoneNumber")
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("PhoneNumber");
 
                 b.Property<string>("UserId")
-                    .IsRequired()
-                    .HasColumnType("TEXT");
+                    .HasMaxLength(450)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("UserId");
 
                 b.HasKey("Id");
 
                 b.HasIndex("UserId")
                     .IsUnique();
 
-                b.ToTable("Patients");
+                b.ToTable("Patient");
+            });
+
+        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Service", b =>
+            {
+                b.Property<int>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("Id");
+
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(250)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Name");
+
+                b.Property<decimal>("Price")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("decimal(18, 2)")
+                    .HasColumnName("Price");
+
+                b.Property<int>("SpecialtyId")
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("SpecialtyId");
+
+                b.HasKey("Id");
+
+                b.HasIndex("SpecialtyId");
+
+                b.ToTable("Service");
             });
 
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Specialty", b =>
             {
                 b.Property<int>("Id")
                     .ValueGeneratedOnAdd()
-                    .HasColumnType("INTEGER");
+                    .HasColumnType("INTEGER")
+                    .HasColumnName("Id");
+
+                b.Property<string>("CommonSymptoms")
+                    .HasColumnType("TEXT")
+                    .HasColumnName("CommonSymptoms");
 
                 b.Property<string>("Description")
                     .HasMaxLength(500)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Description");
 
                 b.Property<bool>("IsActive")
                     .HasColumnType("INTEGER");
 
                 b.Property<string>("Name")
                     .IsRequired()
-                    .HasMaxLength(100)
-                    .HasColumnType("TEXT");
+                    .HasMaxLength(200)
+                    .HasColumnType("TEXT")
+                    .HasColumnName("Name");
 
                 b.HasKey("Id");
 
-                b.ToTable("Specialties");
+                b.ToTable("Specialty");
             });
 
         modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -729,6 +766,25 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("AspNetUserTokens");
             });
 
+        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Appointment", b =>
+            {
+                b.HasOne("DatLichKhamBenh.Models.Entities.Doctor", "Doctor")
+                    .WithMany("Appointments")
+                    .HasForeignKey("DoctorId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.HasOne("DatLichKhamBenh.Models.Entities.Patient", "Patient")
+                    .WithMany("Appointments")
+                    .HasForeignKey("PatientId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.Navigation("Doctor");
+
+                b.Navigation("Patient");
+            });
+
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.BacSi", b =>
             {
                 b.HasOne("DatLichKhamBenh.Models.Entities.ApplicationUser", "ApplicationUser")
@@ -757,17 +813,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Navigation("User");
             });
 
-        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.DichVu", b =>
-            {
-                b.HasOne("DatLichKhamBenh.Models.Entities.ChuyenKhoa", "ChuyenKhoa")
-                    .WithMany()
-                    .HasForeignKey("ChuyenKhoaId")
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .IsRequired();
-
-                b.Navigation("ChuyenKhoa");
-            });
-
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Doctor", b =>
             {
                 b.HasOne("DatLichKhamBenh.Models.Entities.Specialty", "Specialty")
@@ -779,12 +824,23 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.HasOne("DatLichKhamBenh.Models.Entities.ApplicationUser", "User")
                     .WithOne("DoctorProfile")
                     .HasForeignKey("DatLichKhamBenh.Models.Entities.Doctor", "UserId")
-                    .OnDelete(DeleteBehavior.Cascade)
+                    .OnDelete(DeleteBehavior.Restrict)
                     .IsRequired();
 
                 b.Navigation("Specialty");
 
                 b.Navigation("User");
+            });
+
+        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.DoctorSchedule", b =>
+            {
+                b.HasOne("DatLichKhamBenh.Models.Entities.Doctor", "Doctor")
+                    .WithMany("DoctorSchedules")
+                    .HasForeignKey("DoctorId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.Navigation("Doctor");
             });
 
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.DonThuoc", b =>
@@ -809,43 +865,25 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Navigation("User");
             });
 
-        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.LichHen", b =>
-            {
-                b.HasOne("DatLichKhamBenh.Models.Entities.BacSi", "BacSiThongTin")
-                    .WithMany()
-                    .HasForeignKey("BacSiId");
-
-                b.HasOne("DatLichKhamBenh.Models.Entities.BenhNhan", "BenhNhan")
-                    .WithMany("LichHens")
-                    .HasForeignKey("BenhNhanId")
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .IsRequired();
-
-                b.Navigation("BacSiThongTin");
-
-                b.Navigation("BenhNhan");
-            });
-
-        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.LichLamViec", b =>
-            {
-                b.HasOne("DatLichKhamBenh.Models.Entities.BacSi", "BacSi")
-                    .WithMany()
-                    .HasForeignKey("BacSiId")
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .IsRequired();
-
-                b.Navigation("BacSi");
-            });
-
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Patient", b =>
             {
                 b.HasOne("DatLichKhamBenh.Models.Entities.ApplicationUser", "User")
                     .WithOne("PatientProfile")
                     .HasForeignKey("DatLichKhamBenh.Models.Entities.Patient", "UserId")
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .IsRequired();
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 b.Navigation("User");
+            });
+
+        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Service", b =>
+            {
+                b.HasOne("DatLichKhamBenh.Models.Entities.Specialty", "Specialty")
+                    .WithMany("Services")
+                    .HasForeignKey("SpecialtyId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired();
+
+                b.Navigation("Specialty");
             });
 
         modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -906,14 +944,16 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Navigation("PatientProfile");
             });
 
-        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.BenhNhan", b =>
-            {
-                b.Navigation("LichHens");
-            });
-
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.ChuyenKhoa", b =>
             {
                 b.Navigation("BacSis");
+            });
+
+        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Doctor", b =>
+            {
+                b.Navigation("Appointments");
+
+                b.Navigation("DoctorSchedules");
             });
 
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.HoSoBenhAn", b =>
@@ -921,9 +961,16 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.Navigation("DonThuocs");
             });
 
+        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Patient", b =>
+            {
+                b.Navigation("Appointments");
+            });
+
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Specialty", b =>
             {
                 b.Navigation("Doctors");
+
+                b.Navigation("Services");
             });
 #pragma warning restore 612, 618
     }

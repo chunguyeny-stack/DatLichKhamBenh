@@ -1,0 +1,16 @@
+@model DatLichKhamBenh.Models.Entities.Specialty
+@{ ViewData["Title"] = "Thêm chuyên khoa"; }
+<section class="admin-user-management">
+    <header class="admin-page-header"><div><h1 class="admin-page-title">Thêm chuyên khoa</h1></div></header>
+    <div class="admin-panel p-4">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="mb-3"><label asp-for="Name" class="form-label"></label><input asp-for="Name" class="form-control"/><span asp-validation-for="Name" class="text-danger"></span></div>
+            <div class="mb-3"><label asp-for="Description" class="form-label"></label><textarea asp-for="Description" class="form-control"></textarea></div>
+            <div class="mb-3"><label asp-for="CommonSymptoms" class="form-label">Triệu chứng thường gặp</label><textarea asp-for="CommonSymptoms" class="form-control"></textarea></div>
+            <button class="admin-create-button">Lưu</button>
+            <a asp-action="Index" class="btn btn-secondary ms-2">Hủy</a>
+        </form>
+    </div>
+</section>
