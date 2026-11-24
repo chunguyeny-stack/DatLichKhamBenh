@@ -1,9 +1,14 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Models.ViewModels;
 using DatLichKhamBenh.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace DatLichKhamBenh.Services.Impl
 {
@@ -12,222 +17,253 @@ namespace DatLichKhamBenh.Services.Impl
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<AuthService> _logger;
+
         public AuthService(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            ILogger<AuthService> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _context = context;
+            _logger = logger;
         }
 
+        // ==========================================
+        // 1. ĐĂNG NHẬP
+        // ==========================================
         public async Task<(bool Success, string Message)> LoginAsync(LoginViewModel model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null) return (false, "Email hoặc mật khẩu không đúng.");
+            if (user == null)
+                return (false, "Email hoặc mật khẩu không chính xác.");
 
-            // Check khóa tài khoản
+            if (!user.IsActive)
+                return (false, "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
+
             if (await _userManager.IsLockedOutAsync(user))
-                return (false, "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
+                return (false, "Tài khoản đã bị khóa tạm thời do đăng nhập sai nhiều lần. Vui lòng thử lại sau.");
 
             var result = await _signInManager.PasswordSignInAsync(
-                user, model.Password, model.RememberMe, lockoutOnFailure: true);
+                user.UserName!,
+                model.Password,
+                model.RememberMe,
+                lockoutOnFailure: true);
 
             if (result.Succeeded)
             {
-                await LogActionAsync(user.Id, "Login", user.Id, "Đăng nhập thành công");
-                return (true, "Đăng nhập thành công");
+                await _userManager.ResetAccessFailedCountAsync(user);
+                return (true, "Đăng nhập thành công.");
             }
 
             if (result.IsLockedOut)
-                return (false, "Tài khoản bị tạm khóa do nhập sai quá nhiều lần.");
+            {
+                _logger.LogWarning("Tài khoản {Email} bị khóa do đăng nhập sai nhiều lần.", model.Email);
+                return (false, "Tài khoản đã bị khóa tạm thời do đăng nhập sai nhiều lần.");
+            }
 
-            return (false, "Email hoặc mật khẩu không đúng.");
+            return (false, "Email hoặc mật khẩu không chính xác.");
         }
 
-        public async Task<(bool Success, string Message)> ChangePasswordAsync(string userId, ChangePasswordViewModel model)
-        {
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return (false, "Không tìm thấy người dùng.");
-
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
-            if (!result.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                var errors = string.Join("; ", result.Errors.Select(e => e.Description));
-                return (false, errors);
-            }
-
-            // QUAN TRỌNG: Tắt cờ đổi mật khẩu & Rotate Security Stamp
-            user.MustChangePassword = false;
-            var updateResult = await _userManager.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                var errors = string.Join("; ", updateResult.Errors.Select(e => e.Description));
-                return (false, $"Không thể cập nhật trạng thái sau khi đổi mật khẩu: {errors}");
-            }
-
-            var stampResult = await _userManager.UpdateSecurityStampAsync(user);
-            if (!stampResult.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                var errors = string.Join("; ", stampResult.Errors.Select(e => e.Description));
-                return (false, $"Không thể làm mới bảo mật phiên đăng nhập: {errors}");
-            }
-
-            await LogActionAsync(userId, "ChangePassword", userId, "Đổi mật khẩu thành công");
-            await transaction.CommitAsync();
-            await _signInManager.RefreshSignInAsync(user); // Cấp lại cookie mới cho user hiện tại
-
-            return (true, "Đổi mật khẩu thành công.");
-        }
-
+        // ==========================================
+        // 2. ĐĂNG KÝ (BỆNH NHÂN) - BỎ OTP
+        // ==========================================
         public async Task<(bool Success, string Message)> RegisterAsync(RegisterViewModel model)
         {
-            var existing = await _userManager.FindByEmailAsync(model.Email);
-            if (existing != null)
-                return (false, "Email đã được sử dụng.");
+            if (model == null)
+                return (false, "Dữ liệu đăng ký không hợp lệ.");
+
+            var email = model.Email?.Trim() ?? string.Empty;
+
+            var existingUser = await _userManager.FindByEmailAsync(email);
+            if (existingUser != null)
+                return (false, "Email này đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.");
+
+            var fullName = $"{model.MiddleName} {model.FirstName}".Trim();
+            if (string.IsNullOrWhiteSpace(fullName)) fullName = email;
 
             var user = new ApplicationUser
             {
-                UserName = model.Email,
-                Email = model.Email,
-                FirstName = model.FirstName,
-                MiddleName = model.MiddleName,
-                PhoneNumber = model.PhoneNumber,
-                DateOfBirth = model.DateOfBirth,
+                UserName = email,
+                Email = email,
                 EmailConfirmed = true,
+                FullName = fullName,
+                MiddleName = model.MiddleName?.Trim() ?? string.Empty,
+                FirstName = model.FirstName?.Trim() ?? string.Empty,
+                PhoneNumber = string.IsNullOrWhiteSpace(model.PhoneNumber) ? null : model.PhoneNumber.Trim(),
+                DateOfBirth = model.DateOfBirth,
+                IsActive = true,
+                MustChangePassword = false,
                 LockoutEnabled = true,
-                MustChangePassword = false
+                LockoutEnd = null
             };
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
-            var result = await _userManager.CreateAsync(user, model.Password);
-            if (!result.Succeeded)
+
+            var createResult = await _userManager.CreateAsync(user, model.Password);
+            if (!createResult.Succeeded)
             {
                 await transaction.RollbackAsync();
-                return (false, string.Join("; ", result.Errors.Select(e => e.Description)));
+                var errors = string.Join("; ", createResult.Errors.Select(e => e.Description));
+                _logger.LogWarning("Đăng ký thất bại cho {Email}: {Errors}", email, errors);
+                return (false, errors);
             }
 
             var roleResult = await _userManager.AddToRoleAsync(user, "Patient");
             if (!roleResult.Succeeded)
             {
                 await transaction.RollbackAsync();
-                return (false, string.Join("; ", roleResult.Errors.Select(e => e.Description)));
+                var errors = string.Join("; ", roleResult.Errors.Select(e => e.Description));
+                _logger.LogWarning("Gán role Patient thất bại cho {Email}: {Errors}", email, errors);
+                return (false, errors);
             }
 
             _context.Patients.Add(new Patient
             {
                 UserId = user.Id,
-                CreatedAt = DateTime.Now,
-                IsActive = true
+                FullName = user.FullName,
+                PhoneNumber = user.PhoneNumber,
+                Email = user.Email,
+                DateOfBirth = model.DateOfBirth,
+                IsActive = true,
+                CreatedAt = DateTime.Now
             });
-            await _context.SaveChangesAsync();
 
-            await LogActionAsync(user.Id, "Register", user.Id, "Đăng ký tài khoản bệnh nhân");
-            await transaction.CommitAsync();
-            return (true, "Đăng ký thành công. Bạn có thể đăng nhập ngay.");
+            try
+            {
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Lỗi khi tạo hồ sơ bệnh nhân cho {Email}.", email);
+                await _userManager.DeleteAsync(user);
+                return (false, "Không thể hoàn tất đăng ký. Vui lòng thử lại sau.");
+            }
+
+            _logger.LogInformation("Đã đăng ký tài khoản bệnh nhân {Email} thành công.", email);
+            return (true, "Đăng ký thành công. Vui lòng đăng nhập.");
         }
 
+        // ==========================================
+        // 3. ĐỔI MẬT KHẨU
+        // ==========================================
+        public async Task<(bool Success, string Message)> ChangePasswordAsync(string userId, ChangePasswordViewModel model)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                return (false, "Không xác định được tài khoản.");
+
+            if (model == null || string.IsNullOrWhiteSpace(model.NewPassword))
+                return (false, "Dữ liệu đổi mật khẩu không hợp lệ.");
+
+            if (!string.Equals(model.NewPassword, model.ConfirmPassword, StringComparison.Ordinal))
+                return (false, "Mật khẩu xác nhận không khớp.");
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return (false, "Không tìm thấy tài khoản.");
+
+            // Sử dụng OldPassword thay vì CurrentPassword theo ViewModel mới
+            var result = await _userManager.ChangePasswordAsync(
+                user,
+                model.OldPassword ?? string.Empty,
+                model.NewPassword);
+
+            if (!result.Succeeded)
+            {
+                var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                _logger.LogWarning("Đổi mật khẩu thất bại cho {UserId}: {Errors}", userId, errors);
+                return (false, errors);
+            }
+
+            // Tắt cờ đổi mật khẩu lần đầu
+            if (user.MustChangePassword)
+            {
+                user.MustChangePassword = false;
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    var errors = string.Join("; ", updateResult.Errors.Select(e => e.Description));
+                    _logger.LogError("Không thể tắt cờ MustChangePassword cho {UserId}: {Errors}", userId, errors);
+                    return (false, "Đổi mật khẩu thành công nhưng không thể cập nhật trạng thái tài khoản. Vui lòng liên hệ quản trị viên.");
+                }
+            }
+
+            // Vô hiệu hóa các session cũ
+            await _userManager.UpdateSecurityStampAsync(user);
+
+            _logger.LogInformation("Tài khoản {UserId} đã đổi mật khẩu thành công.", userId);
+            return (true, "Đổi mật khẩu thành công.");
+        }
+
+        // ==========================================
+        // 4. KHÓA TÀI KHOẢN
+        // ==========================================
         public async Task<(bool Success, string Message)> LockUserAsync(string adminId, LockUserViewModel model)
         {
             var user = await _userManager.FindByIdAsync(model.Id);
-            if (user == null) return (false, "Không tìm thấy tài khoản.");
-            if (user.Id == adminId) return (false, "Không thể tự khóa tài khoản của mình.");
+            if (user == null)
+                return (false, "Không tìm thấy tài khoản cần khóa.");
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
+                return (false, "Không thể khóa tài khoản Quản trị viên.");
 
-            var lockoutEnabled = await _userManager.SetLockoutEnabledAsync(user, true);
-            if (!lockoutEnabled.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                return (false, string.Join("; ", lockoutEnabled.Errors.Select(error => error.Description)));
-            }
+            user.LockoutEnd = DateTimeOffset.MaxValue;
+            user.LockoutEnabled = true;
 
-            var lockoutResult = await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
-            if (!lockoutResult.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                return (false, string.Join("; ", lockoutResult.Errors.Select(error => error.Description)));
-            }
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return (false, "Khóa tài khoản thất bại.");
 
-            user.LockoutReason = model.Reason;
-            var updateResult = await _userManager.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                return (false, string.Join("; ", updateResult.Errors.Select(error => error.Description)));
-            }
-
-            var stampResult = await _userManager.UpdateSecurityStampAsync(user);
-            if (!stampResult.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                return (false, string.Join("; ", stampResult.Errors.Select(error => error.Description)));
-            }
-
-            await LogActionAsync(adminId, "LockUser", user.Id, model.Reason);
-            await transaction.CommitAsync();
-            return (true, "Đã khóa tài khoản.");
+            await LogActionAsync(adminId, "LockUser", user.Id, $"Khóa tài khoản {user.Email}. Lý do: {model.Reason}");
+            return (true, "Đã khóa tài khoản thành công.");
         }
 
-        public async Task<(bool Success, string Message)> UnlockUserAsync(string adminId, string targetUserId)
+        // ==========================================
+        // 5. MỞ KHÓA TÀI KHOẢN
+        // ==========================================
+        public async Task<(bool Success, string Message)> UnlockUserAsync(string adminId, string userId)
         {
-            var user = await _userManager.FindByIdAsync(targetUserId);
-            if (user == null) return (false, "Không tìm thấy tài khoản.");
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return (false, "Không tìm thấy tài khoản.");
 
-            await using var transaction = await _context.Database.BeginTransactionAsync();
+            user.LockoutEnd = null;
+            user.AccessFailedCount = 0;
 
-            var lockoutEnabled = await _userManager.SetLockoutEnabledAsync(user, true);
-            if (!lockoutEnabled.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                return (false, string.Join("; ", lockoutEnabled.Errors.Select(error => error.Description)));
-            }
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return (false, "Mở khóa tài khoản thất bại.");
 
-            var unlockResult = await _userManager.SetLockoutEndDateAsync(user, null);
-            if (!unlockResult.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                return (false, string.Join("; ", unlockResult.Errors.Select(error => error.Description)));
-            }
-
-            user.LockoutReason = null;
-            var updateResult = await _userManager.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                return (false, string.Join("; ", updateResult.Errors.Select(error => error.Description)));
-            }
-
-            var stampResult = await _userManager.UpdateSecurityStampAsync(user);
-            if (!stampResult.Succeeded)
-            {
-                await transaction.RollbackAsync();
-                return (false, string.Join("; ", stampResult.Errors.Select(error => error.Description)));
-            }
-
-            await LogActionAsync(adminId, "UnlockUser", user.Id, "Mở khóa tài khoản");
-            await transaction.CommitAsync();
-            return (true, "Đã mở khóa tài khoản.");
+            await LogActionAsync(adminId, "UnlockUser", user.Id, $"Mở khóa tài khoản {user.Email}");
+            return (true, "Đã mở khóa tài khoản thành công.");
         }
 
-        public async Task LogActionAsync(string actorId, string action, string targetId, string? details)
+        // ==========================================
+        // 6. GHI LOG HÀNH ĐỘNG
+        // ==========================================
+        public async Task LogActionAsync(string actorUserId, string action, string targetUserId, string? details)
         {
-            _context.AuditLogs.Add(new AuditLog
+            try
             {
-                ActorUserId = actorId,
-                Action = action,
-                TargetUserId = targetId,
-                Details = details,
-                CreatedAt = DateTime.UtcNow
-            });
-            await _context.SaveChangesAsync();
+                var log = new AuditLog
+                {
+                    ActorUserId = actorUserId,
+                    Action = action,
+                    TargetUserId = targetUserId,
+                    Details = details,
+                    CreatedAt = DateTime.Now
+                };
+                _context.AuditLogs.Add(log);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Không thể ghi AuditLog cho hành động {Action}.", action);
+            }
         }
-
-        // ... (Phần RegisterAsync giữ nguyên như code trước)
     }
 }
