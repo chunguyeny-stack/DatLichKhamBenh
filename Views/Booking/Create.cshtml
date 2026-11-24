@@ -333,7 +333,6 @@
             @Html.AntiForgeryToken()
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-<<<<<<< HEAD
                 <div class="row g-4">
                     <div class="col-lg-8">
                         <div class="row g-3">
@@ -405,75 +404,31 @@
                         <div class="mt-4 d-flex gap-2 flex-wrap">
                             <button type="submit" class="btn-submit-pink">Xác nhận đặt lịch</button>
                             <a asp-controller="Doctor" asp-action="Index" class="btn-back-soft">Chọn bác sĩ khác</a>
-=======
-            <div class="bk-step-section">
-                <h5 class="bk-step-heading">
-                    <span class="bk-step-code">B1</span>
-                    <span>Chọn BS</span>
-                </h5>
-
-                @if (Model != null && Model.DoctorId > 0 && !string.IsNullOrWhiteSpace(Model.TenBacSi))
-                {
-                    <input type="hidden" asp-for="DoctorId" />
-                    <div class="bk-doctor-box">
-                        <div class="bk-doctor-line"><strong>Bác sĩ:</strong> @Model.TenBacSi</div>
-                        <div class="bk-doctor-line"><strong>Chuyên khoa:</strong> @(Model.TenChuyenKhoa ?? "Chưa phân khoa")</div>
-                        <div class="bk-doctor-line">
-                            <strong>Giá khám gốc:</strong>
-                            <span class="bk-price-text">@Model.GiaKhamGoc.ToString("N0") đ</span>
-                            <span class="text-muted small">(Ca tối +10%)</span>
->>>>>>> d50ae279b4308917d3c0312f57b0103e6b670b64
                         </div>
                     </div>
-                }
-                else
-                {
-                    <select asp-for="DoctorId" asp-items="@(ViewBag.Doctors as Microsoft.AspNetCore.Mvc.Rendering.SelectList)" class="form-select">
-                        <option value="">-- Chọn bác sĩ --</option>
-                    </select>
-                    <span asp-validation-for="DoctorId" class="text-danger small"></span>
-                }
-            </div>
-
-            <div class="bk-step-section">
-                <h5 class="bk-step-heading">
-                    <span class="bk-step-code">B2</span>
-                    <span>Chọn ngày (giới hạn 14 ngày) + Chọn giờ</span>
-                </h5>
-
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label asp-for="NgayKham" class="form-label">Ngày khám</label>
-                        <input asp-for="NgayKham" type="date" min="@minDate" max="@maxDate" class="form-control" />
-                        <span asp-validation-for="NgayKham" class="text-danger small"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="CaKham" class="form-label">Ca khám</label>
-                        <select asp-for="CaKham" asp-items="Html.GetEnumSelectList<CaKham>()" class="form-select"></select>
-                        <span asp-validation-for="CaKham" class="text-danger small"></span>
+                    <div class="col-lg-4">
+                        <div class="fee-box">
+                            <div class="fee-box-title">Chi tiết chi phí dự kiến</div>
+                            <div class="fee-row">
+                                <span>Phí khám cơ bản:</span>
+                                <strong id="baseFeeText">@Model.PhiCoBan.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) đ</strong>
+                            </div>
+                            <div class="fee-row">
+                                <span>Phụ thu ca tối (10%):</span>
+                                <strong id="surchargeText">0 đ</strong>
+                            </div>
+                            <div class="fee-total">
+                                <span>Tổng tạm tính:</span>
+                                <span id="totalFeeText">@Model.TongPhi.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN")) đ</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="bk-step-section">
-                <h5 class="bk-step-heading">
-                    <span class="bk-step-code">B3</span>
-                    <span>Nhập triệu chứng</span>
-                </h5>
-
-                <textarea asp-for="TrieuChung" rows="3" class="form-control" placeholder="Nhập triệu chứng của bạn..."></textarea>
-                <span asp-validation-for="TrieuChung" class="text-danger small"></span>
-            </div>
-
-            <div class="bk-action-bar">
-                <button type="submit" class="bk-btn-submit">Xác nhận</button>
-                <a asp-controller="Doctor" asp-action="Index" class="bk-btn-cancel">Hủy</a>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
-<<<<<<< HEAD
 <script>
     (function () {
         let baseFee = Number.parseFloat(document.getElementById('doctorSelect')?.selectedOptions[0]?.dataset.fee || '200000');
@@ -542,9 +497,3 @@
         updateFeeAndSlots();
     })();
 </script>
-=======
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-}
-
->>>>>>> d50ae279b4308917d3c0312f57b0103e6b670b64

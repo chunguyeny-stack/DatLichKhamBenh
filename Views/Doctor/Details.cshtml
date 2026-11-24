@@ -1,10 +1,10 @@
-@model DatLichKhamBenh.Models.Entities.BacSi
+@model DatLichKhamBenh.Models.Entities.Doctor
 @using System.Globalization
 @{
     ViewData["Title"] = "Chi tiết Bác sĩ";
-    var tenBs = !string.IsNullOrWhiteSpace(Model.User?.FullName)
-        ? Model.User!.FullName
-        : (Model.User?.Email ?? Model.User?.UserName ?? $"Bác sĩ #{Model.Id}");
+    var tenBs = !string.IsNullOrWhiteSpace(Model.FullName)
+        ? Model.FullName
+        : (Model.User?.FullName ?? Model.User?.Email ?? $"Bác sĩ #{Model.Id}");
     var tenHienThi = string.IsNullOrWhiteSpace(Model.Degree) ? tenBs : $"{Model.Degree} - {tenBs}";
     var kinhNghiemText = Model.YearsOfExperience > 0 ? $"{Model.YearsOfExperience} năm kinh nghiệm" : "Đang cập nhật";
 }
@@ -288,7 +288,7 @@
 
             <div class="detail-row">
                 <span class="detail-label">Chuyên khoa</span>
-                <strong>@(Model.ChuyenKhoa?.TenChuyenKhoa ?? "Chưa phân khoa")</strong>
+                <strong>@(Model.Specialty?.Name ?? "Chưa phân khoa")</strong>
             </div>
 
             <div class="detail-row">
@@ -298,7 +298,7 @@
 
             <div class="detail-row">
                 <span class="detail-label">Đánh giá</span>
-                <strong>@Model.Rating.ToString("0.0") / 5.0 (@Model.SoLuongDanhGia đánh giá)</strong>
+                <strong>Chưa có đánh giá</strong>
             </div>
 
             <div class="detail-row">
@@ -306,19 +306,19 @@
                 <strong style="color: var(--pink-main);">@((Model.ConsultationFee > 0 ? Model.ConsultationFee : 200000m).ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"))) đ</strong>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(Model.ChuyenKhoa?.MoTa))
+            @if (!string.IsNullOrWhiteSpace(Model.Specialty?.Description))
             {
                 <div class="detail-bio-box">
                     <div class="detail-label mb-1">Thông tin chuyên khoa</div>
-                    <p class="mb-0" style="font-size: 14px;">@Model.ChuyenKhoa!.MoTa</p>
+                    <p class="mb-0" style="font-size: 14px;">@Model.Specialty!.Description</p>
                 </div>
             }
 
             <div class="detail-bio-box">
                 <div class="detail-label mb-1">Liên hệ &amp; Thông tin</div>
                 <p class="mb-0" style="font-size: 14px;">
-                    Email: @emailHienThi —
-                    Điện thoại: @sdtHienThi
+                    Email: @(Model.User?.Email ?? "Đang cập nhật") —
+                    Điện thoại: @(Model.User?.PhoneNumber ?? "Đang cập nhật")
                 </p>
             </div>
 
