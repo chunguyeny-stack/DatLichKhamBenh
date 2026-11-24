@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace DatLichKhamBenh.Models.ViewModels
 {
-    public class RegisterViewModel
+    public class RegisterViewModel : IValidatableObject
     {
         [Required(ErrorMessage = "Vui lòng nhập Họ đệm")]
         [StringLength(50, ErrorMessage = "Họ đệm không được vượt quá 50 ký tự")]
@@ -43,5 +44,15 @@ namespace DatLichKhamBenh.Models.ViewModels
         [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp")]
         [Display(Name = "Xác nhận mật khẩu")]
         public string ConfirmPassword { get; set; } = string.Empty;
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (!(Email ?? string.Empty).Trim().EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
+            {
+                yield return new ValidationResult(
+                    "Vui lòng sử dụng địa chỉ Gmail hợp lệ.",
+                    new[] { nameof(Email) });
+            }
+        }
     }
 }

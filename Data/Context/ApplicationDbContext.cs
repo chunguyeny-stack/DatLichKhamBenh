@@ -19,7 +19,6 @@ namespace DatLichKhamBenh.Data.Context
         public DbSet<Appointment> Appointments { get; set; }
 
         public DbSet<AuditLog> AuditLogs { get; set; }
-        public DbSet<EmailVerificationToken> EmailVerificationTokens { get; set; }
 
         public DbSet<BacSi> BacSis { get; set; }
         public DbSet<BenhNhan> BenhNhans { get; set; }

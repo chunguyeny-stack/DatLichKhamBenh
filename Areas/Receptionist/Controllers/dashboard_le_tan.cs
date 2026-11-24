@@ -9,7 +9,7 @@ using DatLichKhamBenh.Data.Context;
 namespace DatLichKhamBenh.Areas.Receptionist.Controllers
 {
     [Area("Receptionist")]
-    // [Authorize(Roles = "Receptionist")]
+    [Authorize(Roles = "Receptionist")]
     public class dashboard_le_tan : Controller
     {
         private readonly ApplicationDbContext _context;

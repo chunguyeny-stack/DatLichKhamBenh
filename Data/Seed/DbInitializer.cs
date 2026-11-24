@@ -99,18 +99,6 @@ namespace DatLichKhamBenh.Data.Seed
                     logger.LogError("Tạo Admin thất bại: {Errors}",
                         string.Join("; ", result.Errors.Select(e => e.Description)));
             }
-            else
-            {
-                var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
-                if (existingAdmin != null && env.IsDevelopment() && !string.IsNullOrWhiteSpace(adminPassword))
-                {
-                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(existingAdmin);
-                    await userManager.ResetPasswordAsync(existingAdmin, resetToken, adminPassword);
-                    existingAdmin.EmailConfirmed = true;
-                    existingAdmin.MustChangePassword = true;
-                    await userManager.UpdateAsync(existingAdmin);
-                }
-            }
 
             // 3. USER MẪU — CHỈ Ở DEVELOPMENT
             if (env.IsDevelopment())
@@ -133,16 +121,6 @@ namespace DatLichKhamBenh.Data.Seed
             var existing = await userManager.FindByEmailAsync(email);
             if (existing != null)
             {
-                var testPassword = config["Seed:DemoPassword"];
-                if (!string.IsNullOrWhiteSpace(testPassword))
-                {
-                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
-                    await userManager.ResetPasswordAsync(existing, resetToken, testPassword);
-                    existing.EmailConfirmed = true;
-                    existing.MustChangePassword = false;
-                    await userManager.UpdateAsync(existing);
-                }
-
                 if (!await userManager.IsInRoleAsync(existing, "Patient"))
                     await userManager.AddToRoleAsync(existing, "Patient");
 
@@ -209,16 +187,6 @@ namespace DatLichKhamBenh.Data.Seed
             var existing = await userManager.FindByEmailAsync(email);
             if (existing != null)
             {
-                var testPassword = config["Seed:DemoPassword"];
-                if (!string.IsNullOrWhiteSpace(testPassword))
-                {
-                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
-                    await userManager.ResetPasswordAsync(existing, resetToken, testPassword);
-                    existing.EmailConfirmed = true;
-                    existing.MustChangePassword = false;
-                    await userManager.UpdateAsync(existing);
-                }
-
                 if (!await userManager.IsInRoleAsync(existing, "Doctor"))
                     await userManager.AddToRoleAsync(existing, "Doctor");
 
@@ -254,7 +222,7 @@ namespace DatLichKhamBenh.Data.Seed
                 MiddleName = "Trần Thị",
                 PhoneNumber = "0912345678",
                 IsActive = true,
-                MustChangePassword = false,
+                MustChangePassword = true,
                 LockoutEnabled = true
             };
 
@@ -303,15 +271,6 @@ namespace DatLichKhamBenh.Data.Seed
             var existing = await userManager.FindByEmailAsync(email);
             if (existing != null)
             {
-                var testPassword = config["Seed:DemoPassword"];
-                if (!string.IsNullOrWhiteSpace(testPassword))
-                {
-                    var resetToken = await userManager.GeneratePasswordResetTokenAsync(existing);
-                    await userManager.ResetPasswordAsync(existing, resetToken, testPassword);
-                    existing.EmailConfirmed = true;
-                    existing.MustChangePassword = false;
-                    await userManager.UpdateAsync(existing);
-                }
                 if (!await userManager.IsInRoleAsync(existing, "Receptionist"))
                     await userManager.AddToRoleAsync(existing, "Receptionist");
                 return;
@@ -334,7 +293,7 @@ namespace DatLichKhamBenh.Data.Seed
                 MiddleName = "Mẫu",
                 IsActive = true,
                 LockoutEnabled = true,
-                MustChangePassword = false
+                MustChangePassword = true
             };
 
             var result = await userManager.CreateAsync(user, password);

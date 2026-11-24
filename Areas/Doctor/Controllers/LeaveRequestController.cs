@@ -1,13 +1,16 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MediSlot.Areas.Doctor.Controllers
 {
     [Area("Doctor")]
+    [Authorize(Roles = "Doctor")]
     public class LeaveRequestController : Controller
     {
         public IActionResult Index() { return View(); }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult Create(DateTime NgayNghi, string CaNghi, string LyDo)
         {
             // Tạm thời chỉ hiện thông báo thành công

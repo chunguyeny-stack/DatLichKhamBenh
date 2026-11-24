@@ -18,10 +18,11 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
     [Authorize(Roles = "Admin")]
     public class UserManagementController : Controller
     {
+        private const string DefaultAccountPassword = "Medislot@2026";
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _context;
-        private readonly IConfiguration _configuration;
         private readonly IAuthService _authService;
         private readonly ILogger<UserManagementController> _logger;
         private readonly IEmailService _emailService;
@@ -30,7 +31,6 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
             ApplicationDbContext context,
-            IConfiguration configuration,
             IAuthService authService,
             ILogger<UserManagementController> logger,
             IEmailService emailService)
@@ -38,7 +38,6 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             _userManager = userManager;
             _roleManager = roleManager;
             _context = context;
-            _configuration = configuration;
             _authService = authService;
             _logger = logger;
             _emailService = emailService;
@@ -198,15 +197,6 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
                 return View(model);
             }
 
-            var initialPassword = _configuration["Seed:StaffPassword"];
-            if (string.IsNullOrWhiteSpace(initialPassword))
-            {
-                ModelState.AddModelError(string.Empty,
-                    "Chưa cấu hình Seed:StaffPassword. Hãy đặt mật khẩu ban đầu qua User Secrets hoặc biến môi trường.");
-                ViewBag.Specialties = await _context.Specialties.Where(s => s.IsActive).ToListAsync();
-                return View(model);
-            }
-
             var existingUser = await _userManager.FindByEmailAsync(model.Email);
             if (existingUser != null)
             {
@@ -232,7 +222,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             };
 
             await using var transaction = await _context.Database.BeginTransactionAsync();
-            var result = await _userManager.CreateAsync(user, initialPassword);
+            var result = await _userManager.CreateAsync(user, DefaultAccountPassword);
 
             if (!result.Succeeded)
             {
@@ -273,7 +263,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             await transaction.CommitAsync();
 
             var encodedEmail = HtmlEncoder.Default.Encode(user.Email!);
-            var encodedPassword = HtmlEncoder.Default.Encode(initialPassword);
+            var encodedPassword = HtmlEncoder.Default.Encode(DefaultAccountPassword);
             var emailSent = await _emailService.SendAsync(
                 user.Email!,
                 "Tài khoản nhân sự MediSlot",
@@ -442,31 +432,44 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return NotFound();
 
-            var defaultPassword = _configuration["Seed:StaffPassword"];
-            if (string.IsNullOrWhiteSpace(defaultPassword))
-            {
-                ModelState.AddModelError(string.Empty,
-                    "Chưa cấu hình Seed:StaffPassword. Hãy đặt mật khẩu mặc định qua User Secrets hoặc biến môi trường.");
-                ViewBag.Email = user.Email;
-                ViewBag.UserId = user.Id;
-                ViewBag.FullName = $"{user.MiddleName} {user.FirstName}".Trim();
-                return View();
-            }
-
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var result = await _userManager.ResetPasswordAsync(user, token, defaultPassword);
+            var result = await _userManager.ResetPasswordAsync(user, token, DefaultAccountPassword);
 
             if (result.Succeeded)
             {
                 user.MustChangePassword = true;
-                await _userManager.UpdateSecurityStampAsync(user);
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    await transaction.RollbackAsync();
+                    foreach (var error in updateResult.Errors)
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    ViewBag.Email = user.Email;
+                    ViewBag.UserId = user.Id;
+                    ViewBag.FullName = user.FullName;
+                    return View();
+                }
+
+                var stampResult = await _userManager.UpdateSecurityStampAsync(user);
+                if (!stampResult.Succeeded)
+                {
+                    await transaction.RollbackAsync();
+                    foreach (var error in stampResult.Errors)
+                        ModelState.AddModelError(string.Empty, error.Description);
+                    ViewBag.Email = user.Email;
+                    ViewBag.UserId = user.Id;
+                    ViewBag.FullName = user.FullName;
+                    return View();
+                }
                 await _authService.LogActionAsync(
                     _userManager.GetUserId(User)!, "ResetPassword", user.Id,
-                    "Admin đặt lại mật khẩu tạm thời");
+                    "Admin đặt lại mật khẩu về mật khẩu mặc định");
+                await transaction.CommitAsync();
                 var emailSent = await _emailService.SendAsync(
                     user.Email!,
                     "Mật khẩu MediSlot đã được đặt lại",
-                    $"<p>Mật khẩu mặc định mới: <strong>{HtmlEncoder.Default.Encode(defaultPassword)}</strong></p><p>Bạn phải đổi mật khẩu ở lần đăng nhập tiếp theo.</p>");
+                    $"<p>Mật khẩu mặc định mới: <strong>{HtmlEncoder.Default.Encode(DefaultAccountPassword)}</strong></p><p>Bạn phải đổi mật khẩu ở lần đăng nhập tiếp theo.</p>");
 
                 if (emailSent)
                 {
@@ -481,6 +484,7 @@ namespace DatLichKhamBenh.Areas.Admin.Controllers
             }
             else
             {
+                await transaction.RollbackAsync();
                 foreach (var error in result.Errors)
                 {
                     ModelState.AddModelError("", error.Description);

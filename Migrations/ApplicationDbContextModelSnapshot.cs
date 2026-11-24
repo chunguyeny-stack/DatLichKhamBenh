@@ -15,7 +15,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261123072325_AppointmentFlowModelSync";
+    public override string LastMigrationId => "20261124102559_RemoveEmailVerificationTokens";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -454,35 +454,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("don_thuoc");
             });
 
-        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.EmailVerificationToken", b =>
-            {
-                b.Property<int>("Id")
-                    .ValueGeneratedOnAdd()
-                    .HasColumnType("INTEGER");
-
-                b.Property<DateTime>("ExpiredAt")
-                    .HasColumnType("TEXT");
-
-                b.Property<bool>("IsUsed")
-                    .HasColumnType("INTEGER");
-
-                b.Property<string>("Token")
-                    .IsRequired()
-                    .HasMaxLength(6)
-                    .HasColumnType("TEXT");
-
-                b.Property<string>("UserId")
-                    .IsRequired()
-                    .HasMaxLength(450)
-                    .HasColumnType("TEXT");
-
-                b.HasKey("Id");
-
-                b.HasIndex("UserId");
-
-                b.ToTable("EmailVerificationTokens");
-            });
-
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.HoSoBenhAn", b =>
             {
                 b.Property<int>("Id")
@@ -852,17 +823,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .IsRequired();
 
                 b.Navigation("HoSoBenhAn");
-            });
-
-        modelBuilder.Entity("DatLichKhamBenh.Models.Entities.EmailVerificationToken", b =>
-            {
-                b.HasOne("DatLichKhamBenh.Models.Entities.ApplicationUser", "User")
-                    .WithMany()
-                    .HasForeignKey("UserId")
-                    .OnDelete(DeleteBehavior.Cascade)
-                    .IsRequired();
-
-                b.Navigation("User");
             });
 
         modelBuilder.Entity("DatLichKhamBenh.Models.Entities.Patient", b =>

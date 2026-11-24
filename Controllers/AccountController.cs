@@ -139,50 +139,6 @@ public class AccountController : Controller
         return RedirectToAction(nameof(Profile));
     }
 
-    [AllowAnonymous]
-    [HttpGet]
-    public async Task<IActionResult> ConfirmEmail(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return RedirectToAction(nameof(Register));
-
-        ViewBag.Email = email;
-        var user = await _userManager.FindByEmailAsync(email);
-        if (user != null && user.EmailConfirmed)
-        {
-            TempData["Success"] = "Email đã được xác thực.";
-            return RedirectToAction(nameof(Login));
-        }
-        return View();
-    }
-
-    [AllowAnonymous]
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ConfirmEmail(string email, string otp)
-    {
-        var result = await _authService.VerifyEmailOtpAsync(email, otp);
-        if (!result.Success)
-        {
-            ModelState.AddModelError(string.Empty, result.Message);
-            ViewBag.Email = email;
-            return View();
-        }
-
-        TempData["Success"] = result.Message;
-        return RedirectToAction(nameof(Login));
-    }
-
-    [AllowAnonymous]
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ResendOtp(string email)
-    {
-        var result = await _authService.ResendEmailOtpAsync(email);
-        TempData[result.Success ? "Success" : "Error"] = result.Message;
-        return RedirectToAction(nameof(ConfirmEmail), new { email });
-    }
-
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
@@ -217,6 +173,7 @@ public class AccountController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(RegisterViewModel model)
     {
+        model.Email = model.Email?.Trim() ?? string.Empty;
         if (!ModelState.IsValid) return View(model);
         var result = await _authService.RegisterAsync(model);
         if (!result.Success)
@@ -225,7 +182,7 @@ public class AccountController : Controller
             return View(model);
         }
         TempData["Success"] = result.Message;
-        return RedirectToAction(nameof(ConfirmEmail), new { email = model.Email });
+        return RedirectToAction(nameof(Login));
     }
 
     [AllowAnonymous]

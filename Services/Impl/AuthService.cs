@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using DatLichKhamBenh.Data.Context;
 using DatLichKhamBenh.Models.Entities;
 using DatLichKhamBenh.Models.ViewModels;
@@ -13,18 +12,14 @@ namespace DatLichKhamBenh.Services.Impl
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ApplicationDbContext _context;
-        private readonly IEmailService _emailService;
-
         public AuthService(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ApplicationDbContext context,
-            IEmailService emailService)
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _context = context;
-            _emailService = emailService;
         }
 
         public async Task<(bool Success, string Message)> LoginAsync(LoginViewModel model)
@@ -56,20 +51,36 @@ namespace DatLichKhamBenh.Services.Impl
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return (false, "Không tìm thấy người dùng.");
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
             if (!result.Succeeded)
             {
+                await transaction.RollbackAsync();
                 var errors = string.Join("; ", result.Errors.Select(e => e.Description));
                 return (false, errors);
             }
 
             // QUAN TRỌNG: Tắt cờ đổi mật khẩu & Rotate Security Stamp
             user.MustChangePassword = false;
-            await _userManager.UpdateAsync(user);
-            await _userManager.UpdateSecurityStampAsync(user); // Vô hiệu hóa cookie cũ
+            var updateResult = await _userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                var errors = string.Join("; ", updateResult.Errors.Select(e => e.Description));
+                return (false, $"Không thể cập nhật trạng thái sau khi đổi mật khẩu: {errors}");
+            }
 
-            await _signInManager.RefreshSignInAsync(user); // Cấp lại cookie mới cho user hiện tại
+            var stampResult = await _userManager.UpdateSecurityStampAsync(user);
+            if (!stampResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                var errors = string.Join("; ", stampResult.Errors.Select(e => e.Description));
+                return (false, $"Không thể làm mới bảo mật phiên đăng nhập: {errors}");
+            }
+
             await LogActionAsync(userId, "ChangePassword", userId, "Đổi mật khẩu thành công");
+            await transaction.CommitAsync();
+            await _signInManager.RefreshSignInAsync(user); // Cấp lại cookie mới cho user hiện tại
 
             return (true, "Đổi mật khẩu thành công.");
         }
@@ -88,16 +99,26 @@ namespace DatLichKhamBenh.Services.Impl
                 MiddleName = model.MiddleName,
                 PhoneNumber = model.PhoneNumber,
                 DateOfBirth = model.DateOfBirth,
-                EmailConfirmed = false,
+                EmailConfirmed = true,
                 LockoutEnabled = true,
-                MustChangePassword = true
+                MustChangePassword = false
             };
 
+            await using var transaction = await _context.Database.BeginTransactionAsync();
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
+            {
+                await transaction.RollbackAsync();
                 return (false, string.Join("; ", result.Errors.Select(e => e.Description)));
+            }
 
-            await _userManager.AddToRoleAsync(user, "Patient");
+            var roleResult = await _userManager.AddToRoleAsync(user, "Patient");
+            if (!roleResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return (false, string.Join("; ", roleResult.Errors.Select(e => e.Description)));
+            }
+
             _context.Patients.Add(new Patient
             {
                 UserId = user.Id,
@@ -106,75 +127,9 @@ namespace DatLichKhamBenh.Services.Impl
             });
             await _context.SaveChangesAsync();
 
-            var emailSent = await SendEmailOtpAsync(user);
             await LogActionAsync(user.Id, "Register", user.Id, "Đăng ký tài khoản bệnh nhân");
-            return emailSent
-                ? (true, "Đăng ký thành công. Vui lòng nhập mã OTP đã gửi đến email.")
-                : (true, "Tài khoản đã được tạo nhưng chưa gửi được OTP. Vui lòng cấu hình email hoặc chọn Gửi lại OTP.");
-        }
-
-        public async Task<(bool Success, string Message)> VerifyEmailOtpAsync(string email, string otp)
-        {
-            if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(otp))
-                return (false, "Email và mã OTP không được để trống.");
-
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-                return (false, "Không tìm thấy tài khoản.");
-
-            var token = await _context.EmailVerificationTokens
-                .Where(t => t.UserId == user.Id && t.Token == otp && !t.IsUsed)
-                .OrderByDescending(t => t.Id)
-                .FirstOrDefaultAsync();
-
-            if (token == null)
-                return (false, "Mã OTP không chính xác.");
-            if (token.ExpiredAt <= DateTime.UtcNow)
-                return (false, "Mã OTP đã hết hạn.");
-
-            token.IsUsed = true;
-            user.EmailConfirmed = true;
-            await _context.SaveChangesAsync();
-            await _userManager.UpdateAsync(user);
-            await LogActionAsync(user.Id, "VerifyEmail", user.Id, "Xác thực email thành công");
-            return (true, "Kích hoạt tài khoản thành công.");
-        }
-
-        public async Task<(bool Success, string Message)> ResendEmailOtpAsync(string email)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-                return (true, "Nếu tài khoản tồn tại, mã OTP mới đã được gửi.");
-            if (user.EmailConfirmed)
-                return (false, "Tài khoản đã được xác thực.");
-
-            if (!await SendEmailOtpAsync(user))
-                return (false, "Chưa gửi được OTP. Vui lòng kiểm tra cấu hình email và thử lại.");
-
-            await LogActionAsync(user.Id, "ResendOtp", user.Id, "Yêu cầu gửi lại OTP");
-            return (true, "Mã OTP mới đã được gửi.");
-        }
-
-        private async Task<bool> SendEmailOtpAsync(ApplicationUser user)
-        {
-            await _context.EmailVerificationTokens
-                .Where(t => t.UserId == user.Id && !t.IsUsed)
-                .ExecuteUpdateAsync(t => t.SetProperty(x => x.IsUsed, true));
-
-            var otp = RandomNumberGenerator.GetInt32(100000, 1_000_000).ToString();
-            _context.EmailVerificationTokens.Add(new EmailVerificationToken
-            {
-                UserId = user.Id,
-                Token = otp,
-                ExpiredAt = DateTime.UtcNow.AddMinutes(5),
-                IsUsed = false
-            });
-            await _context.SaveChangesAsync();
-
-            return await _emailService.SendAsync(
-                user.Email!,
-                "Mã xác thực tài khoản MediSlot",
-                $"<p>Mã OTP của bạn là <strong>{otp}</strong>.</p><p>Mã có hiệu lực trong 5 phút.</p>");
+            await transaction.CommitAsync();
+            return (true, "Đăng ký thành công. Bạn có thể đăng nhập ngay.");
         }
 
         public async Task<(bool Success, string Message)> LockUserAsync(string adminId, LockUserViewModel model)
