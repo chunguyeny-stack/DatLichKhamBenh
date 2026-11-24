@@ -1,4 +1,5 @@
-﻿@model DatLichKhamBenh.Models.Entities.Doctor
+@model DatLichKhamBenh.Models.Entities.BacSi
+@using System.Globalization
 @{
     ViewData["Title"] = "Chi tiết Bác sĩ";
     var tenBs = !string.IsNullOrWhiteSpace(Model.User?.FullName)
@@ -287,7 +288,7 @@
 
             <div class="detail-row">
                 <span class="detail-label">Chuyên khoa</span>
-                <strong>@(Model.Specialty?.Name ?? "Chưa phân khoa")</strong>
+                <strong>@(Model.ChuyenKhoa?.TenChuyenKhoa ?? "Chưa phân khoa")</strong>
             </div>
 
             <div class="detail-row">
@@ -296,8 +297,8 @@
             </div>
 
             <div class="detail-row">
-                <span class="detail-label">Nơi công tác</span>
-                <strong>@(string.IsNullOrWhiteSpace(Model.Workplace) ? "Đang cập nhật" : Model.Workplace)</strong>
+                <span class="detail-label">Đánh giá</span>
+                <strong>@Model.Rating.ToString("0.0") / 5.0 (@Model.SoLuongDanhGia đánh giá)</strong>
             </div>
 
             <div class="detail-row">
@@ -305,23 +306,22 @@
                 <strong style="color: var(--pink-main);">@((Model.ConsultationFee > 0 ? Model.ConsultationFee : 200000m).ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"))) đ</strong>
             </div>
 
-            @if (!string.IsNullOrWhiteSpace(Model.Bio))
+            @if (!string.IsNullOrWhiteSpace(Model.ChuyenKhoa?.MoTa))
             {
                 <div class="detail-bio-box">
-                    <div class="detail-label mb-1">Giới thiệu</div>
-                    <p class="mb-0" style="font-size: 14px;">@Model.Bio</p>
+                    <div class="detail-label mb-1">Thông tin chuyên khoa</div>
+                    <p class="mb-0" style="font-size: 14px;">@Model.ChuyenKhoa!.MoTa</p>
                 </div>
             }
 
             <div class="detail-bio-box">
                 <div class="detail-label mb-1">Liên hệ &amp; Thông tin</div>
                 <p class="mb-0" style="font-size: 14px;">
-                    Email: @(Model.User?.Email ?? "Đang cập nhật") —
-                    Điện thoại: @(Model.User?.PhoneNumber ?? "Đang cập nhật")
+                    Email: @emailHienThi —
+                    Điện thoại: @sdtHienThi
                 </p>
             </div>
 
-            
             <div class="mt-4 d-flex gap-2 flex-wrap">
                 <a asp-controller="Booking" asp-action="Create" asp-route-doctorId="@Model.Id" asp-route-chuyenKhoaId="@Model.SpecialtyId" class="btn-pink-solid">Đặt lịch ngay</a>
                 <a asp-action="Index" class="btn-flat-sec">Quay lại danh sách</a>
