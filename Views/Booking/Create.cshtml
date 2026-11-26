@@ -375,23 +375,17 @@
 
                             <div class="col-md-4">
                                 <label asp-for="CaKham" class="form-label">Ca khám <span class="text-danger">*</span></label>
-                                <select asp-for="CaKham" id="caKhamSelect" asp-items="Html.GetEnumSelectList<CaKham>()" class="form-select"></select>
+                                <select asp-for="CaKham" id="caKhamSelect" asp-items="Html.GetEnumSelectList<CaKham>()" data-initial-value="@((int)Model.CaKham)" class="form-select"></select>
                                 <span asp-validation-for="CaKham" class="text-danger small"></span>
                             </div>
 
                             <div class="col-md-4">
                                 <label asp-for="KhungGio" class="form-label">Khung giờ <span class="text-danger">*</span></label>
-                                <select asp-for="KhungGio" id="timeSlotSelect" class="form-select" required>
-                                    <option value="08:00 - 09:00">08:00 - 09:00 (Sáng)</option>
-                                    <option value="09:00 - 10:00">09:00 - 10:00 (Sáng)</option>
-                                    <option value="10:00 - 11:00">10:00 - 11:00 (Sáng)</option>
-                                    <option value="13:30 - 14:30">13:30 - 14:30 (Chiều)</option>
-                                    <option value="14:30 - 15:30">14:30 - 15:30 (Chiều)</option>
-                                    <option value="15:30 - 16:30">15:30 - 16:30 (Chiều)</option>
-                                    <option value="18:00 - 19:00">18:00 - 19:00 (Tối +10%)</option>
-                                    <option value="19:00 - 20:00">19:00 - 20:00 (Tối +10%)</option>
+                                <select asp-for="KhungGio" id="timeSlotSelect" data-initial-value="@Model.KhungGio" class="form-select" required>
+                                    <option value="">-- Chọn bác sĩ và ngày khám trước --</option>
                                 </select>
                                 <span asp-validation-for="KhungGio" class="text-danger small"></span>
+                                <small id="availabilityMessage" class="text-muted" aria-live="polite"></small>
                             </div>
 
                             <div class="col-12">
@@ -402,7 +396,7 @@
                         </div>
 
                         <div class="mt-4 d-flex gap-2 flex-wrap">
-                            <button type="submit" class="btn-submit-pink">Xác nhận đặt lịch</button>
+                            <button id="submitBookingButton" type="submit" class="btn-submit-pink" disabled>Xác nhận đặt lịch</button>
                             <a asp-controller="Doctor" asp-action="Index" class="btn-back-soft">Chọn bác sĩ khác</a>
                         </div>
                     </div>
@@ -431,28 +425,26 @@
 
 <script>
     (function () {
-        let baseFee = Number.parseFloat(document.getElementById('doctorSelect')?.selectedOptions[0]?.dataset.fee || '200000');
-        if (!Number.isFinite(baseFee) || baseFee <= 0) baseFee = 200000;
         const specialtySelect = document.getElementById('specialtySelect');
         const doctorSelect = document.getElementById('doctorSelect');
         const caKhamSelect = document.getElementById('caKhamSelect');
         const timeSlotSelect = document.getElementById('timeSlotSelect');
         const surchargeText = document.getElementById('surchargeText');
         const totalFeeText = document.getElementById('totalFeeText');
-
-        const slotsByShift = {
-            '1': ['08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00'],
-            '2': ['13:30 - 14:30', '14:30 - 15:30', '15:30 - 16:30'],
-            '3': ['18:00 - 19:00', '19:00 - 20:00']
-        };
+        const availabilityMessage = document.getElementById('availabilityMessage');
+        const submitBookingButton = document.getElementById('submitBookingButton');
+        const availableSlotsUrl = '@Url.Action("GetAvailableSlots", "Booking")';
+        const shiftNames = { '1': 'Ca sáng', '2': 'Ca chiều', '3': 'Ca tối' };
+        let availableSlots = [];
+        let availabilityRequest = 0;
 
         function formatVnd(amount) {
             return amount.toLocaleString('vi-VN') + ' đ';
         }
 
-        function updateFeeAndSlots() {
+        function updateFee() {
             const selectedFee = Number.parseFloat(doctorSelect.selectedOptions[0]?.dataset.fee || '200000');
-            baseFee = Number.isFinite(selectedFee) && selectedFee > 0 ? selectedFee : 200000;
+            const baseFee = Number.isFinite(selectedFee) && selectedFee > 0 ? selectedFee : 200000;
             const baseFeeText = document.getElementById('baseFeeText');
             if (baseFeeText) baseFeeText.textContent = formatVnd(baseFee);
             const shiftVal = caKhamSelect.value;
@@ -460,18 +452,86 @@
             const surcharge = isEvening ? baseFee * 0.1 : 0;
             surchargeText.textContent = formatVnd(surcharge);
             totalFeeText.textContent = formatVnd(baseFee + surcharge);
+        }
 
-            const allowedSlots = slotsByShift[shiftVal];
-            if (allowedSlots) {
-                const currentVal = timeSlotSelect.value;
-                timeSlotSelect.innerHTML = '';
-                allowedSlots.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s;
-                    opt.textContent = s;
-                    if (s === currentVal) opt.selected = true;
-                    timeSlotSelect.appendChild(opt);
+        function updateTimeSlots(preferredSlot) {
+            const shiftVal = caKhamSelect.value;
+            const slots = availableSlots.filter(slot => String(slot.caKham) === shiftVal);
+            timeSlotSelect.innerHTML = '<option value="">-- Chọn khung giờ --</option>';
+            slots.forEach(slot => {
+                const option = document.createElement('option');
+                option.value = slot.timeSlot;
+                option.textContent = slot.timeSlot;
+                timeSlotSelect.appendChild(option);
+            });
+
+            if (preferredSlot && slots.some(slot => slot.timeSlot === preferredSlot)) {
+                timeSlotSelect.value = preferredSlot;
+            }
+
+            submitBookingButton.disabled = slots.length === 0;
+            if (slots.length === 0 && availableSlots.length > 0) {
+                availabilityMessage.textContent = 'Ca này hiện không còn khung giờ trống.';
+            } else if (availableSlots.length > 0) {
+                availabilityMessage.textContent = 'Các khung giờ hiển thị được lấy từ ca trực còn trống của bác sĩ.';
+            }
+        }
+
+        async function loadAvailableSlots() {
+            const requestId = ++availabilityRequest;
+            const doctorId = doctorSelect.value;
+            const appointmentDate = document.querySelector('[name="NgayKham"]').value;
+            availableSlots = [];
+            timeSlotSelect.innerHTML = '<option value="">-- Chọn bác sĩ và ngày khám trước --</option>';
+            caKhamSelect.disabled = true;
+            timeSlotSelect.disabled = true;
+            submitBookingButton.disabled = true;
+
+            if (!doctorId || !appointmentDate) {
+                availabilityMessage.textContent = '';
+                return;
+            }
+
+            availabilityMessage.textContent = 'Đang tải ca trực còn trống...';
+            try {
+                const query = new URLSearchParams({ doctorId, appointmentDate });
+                const response = await fetch(`${availableSlotsUrl}?${query}`);
+                if (!response.ok) {
+                    throw new Error(`Tải khung giờ thất bại (${response.status}).`);
+                }
+
+                const slots = await response.json();
+                if (requestId !== availabilityRequest) return;
+                availableSlots = Array.isArray(slots) ? slots : [];
+
+                const shiftValues = [...new Set(availableSlots.map(slot => String(slot.caKham)))];
+                const preferredShift = caKhamSelect.value || caKhamSelect.dataset.initialValue;
+                caKhamSelect.innerHTML = '';
+                if (shiftValues.length === 0) {
+                    caKhamSelect.innerHTML = '<option value="">Không có ca trực trống</option>';
+                    timeSlotSelect.innerHTML = '<option value="">Không có khung giờ trống trong ngày này</option>';
+                    availabilityMessage.textContent = 'Bác sĩ chưa có ca trực hoặc các khung giờ đã được đặt.';
+                    return;
+                }
+
+                shiftValues.forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = shiftNames[value] || `Ca ${value}`;
+                    caKhamSelect.appendChild(option);
                 });
+                caKhamSelect.value = shiftValues.includes(preferredShift) ? preferredShift : shiftValues[0];
+                caKhamSelect.disabled = false;
+                timeSlotSelect.disabled = false;
+                updateTimeSlots(timeSlotSelect.dataset.initialValue);
+                timeSlotSelect.dataset.initialValue = '';
+                updateFee();
+            } catch (error) {
+                if (requestId !== availabilityRequest) return;
+                console.error(error);
+                caKhamSelect.innerHTML = '<option value="">Không tải được ca trực</option>';
+                timeSlotSelect.innerHTML = '<option value="">Vui lòng thử lại sau</option>';
+                availabilityMessage.textContent = 'Không thể tải lịch trực. Vui lòng tải lại trang hoặc thử lại.';
             }
         }
 
@@ -489,11 +549,22 @@
         }
 
 
-        specialtySelect?.addEventListener('change', filterDoctorsBySpecialty);
-        doctorSelect?.addEventListener('change', updateFeeAndSlots);
-        caKhamSelect?.addEventListener('change', updateFeeAndSlots);
+        specialtySelect?.addEventListener('change', () => {
+            filterDoctorsBySpecialty();
+            loadAvailableSlots();
+        });
+        doctorSelect?.addEventListener('change', () => {
+            updateFee();
+            loadAvailableSlots();
+        });
+        document.querySelector('[name="NgayKham"]')?.addEventListener('change', loadAvailableSlots);
+        caKhamSelect?.addEventListener('change', () => {
+            updateTimeSlots();
+            updateFee();
+        });
 
         filterDoctorsBySpecialty();
-        updateFeeAndSlots();
+        updateFee();
+        loadAvailableSlots();
     })();
 </script>

@@ -2,130 +2,252 @@
    GIAO DIỆN ĐĂNG NHẬP / ĐĂNG KÝ (AUTH) - MEDISLOT
 ========================================= */
 
+:root {
+    --auth-primary: #2563eb;
+    --auth-primary-hover: #1d4ed8;
+     --auth-text: #1e293b;
+    --auth-muted: #64748b;
+    --auth-border: #cbd5e1;
+    --auth-glass-bg: rgba(255, 255, 255, 0.68);
+    --auth-glass-border: rgba(255, 255, 255, 0.85);
+}
+
 .auth-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    /* Nền pastel gradient mờ ảo */
-    background: 
-        radial-gradient(circle at 10% 20%, rgba(200, 230, 255, 0.5) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(255, 220, 240, 0.5) 0%, transparent 40%),
-        linear-gradient(135deg, #f3f6fc 0%, #f8f5fb 100%);
-    height: 100vh;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    background:
+        radial-gradient(circle at 12% 18%, rgba(196, 181, 253, 0.45) 0%, transparent 42%),
+        radial-gradient(circle at 88% 82%, rgba(251, 207, 232, 0.48) 0%, transparent 42%),
+        linear-gradient(135deg, #e0f2fe 0%, #f3e8ff 50%, #fdf2f8 100%);
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0;
+    padding: 20px;
+    color: var(--auth-text);
 }
 
-/* Hộp trắng chứa Form */
-.login-card {
-    background-color: #ffffff;
-    width: 440px;
+/* Container kính mờ */
+.glass-container {
+    background: var(--auth-glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    width: 100%;
+    max-width: 440px;
     padding: 44px;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-    border-radius: 8px; /* Bo góc mềm mại hơn chút */
+    box-shadow: 0 10px 34px rgba(15, 23, 42, 0.12);
+    border-radius: 12px;
+    border: 1px solid var(--auth-glass-border);
     position: relative;
 }
 
-/* Khối Logo và Tên thương hiệu */
-.brand-container {
+/* Nút quay lại */
+.btn-back {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: var(--auth-text);
+    font-size: 1.2rem;
+    text-decoration: none;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.btn-back:hover {
+    color: var(--auth-primary);
+    transform: translateX(-2px);
+}
+
+/* Logo và tên thương hiệu */
+.logo-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 24px;
-}
-
-.brand-container img {
-    height: 40px;
-    width: auto;
-}
-
-.brand-container span {
-    font-size: 26px;
-    font-weight: 700;
-    color: #1b1b1b; /* Màu đen xám */
-    letter-spacing: -0.5px;
-}
-
-/* Tiêu đề chính */
-.login-title {
-    font-size: 24px;
-    font-weight: 600;
-    color: #1b1b1b;
-    margin-bottom: 24px;
-}
-
-/* Form input kiểu gạch chân */
-.form-group {
+    margin-top: 8px;
     margin-bottom: 20px;
 }
 
-.form-control {
-    width: 100%;
-    padding: 10px 0;
-    font-size: 15px;
-    border: none;
-    border-bottom: 1px solid #666;
-    outline: none;
-    background: transparent;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
+.logo-img {
+    height: 36px;
+    width: auto;
+    margin-right: 12px;
 }
 
-.form-control:focus {
-    border-bottom: 2px solid var(--primary-color, #0099e6); 
+.logo-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #334155;
+    letter-spacing: -0.4px;
 }
 
-.form-control::placeholder {
-    color: #999;
-}
-
-/* Nút Submit */
-.btn-submit {
-    width: 100%;
-    background-color: var(--primary-color, #0099e6);
-    color: white;
-    border: none;
-    padding: 12px 16px;
-    font-size: 15px;
+.glass-container h2 {
+    font-size: 1.75rem;
     font-weight: 600;
+    margin-bottom: 24px;
+    color: var(--auth-text);
+}
+
+/* Ô nhập liệu */
+.glass-container .form-control {
+    border: 1px solid var(--auth-border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 1rem;
+    background-color: rgba(255, 255, 255, 0.92);
+    color: var(--auth-text);
+    box-shadow: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-container .form-control:focus {
+    border-color: var(--auth-primary);
+    background-color: #ffffff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+}
+
+.glass-container .form-control::placeholder {
+    color: #94a3b8;
+    font-size: 0.95rem;
+}
+
+/* Ô mật khẩu và nút ẩn/hiện */
+.password-wrapper {
+    position: relative;
+}
+
+.password-wrapper .form-control {
+    padding-right: 42px;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
     cursor: pointer;
-    transition: background 0.2s;
-    margin-top: 10px;
-    border-radius: 4px;
+    color: var(--auth-muted);
+    font-size: 1.05rem;
+    z-index: 10;
+    transition: color 0.2s ease;
 }
 
-.btn-submit:hover {
-    background-color: #007bb8;
+.toggle-password:hover {
+    color: var(--auth-primary);
 }
 
-/* Link phụ */
-.ms-links {
-    margin-top: 20px;
-    font-size: 14px;
-    color: #333;
+.form-check-label {
+    font-size: 0.92rem;
+    color: var(--auth-text);
+    cursor: pointer;
 }
 
-.ms-links a {
-    color: var(--primary-color, #0099e6);
+.forgot-link {
+    font-size: 0.92rem;
+    color: var(--auth-primary);
     text-decoration: none;
     font-weight: 500;
 }
 
-.ms-links a:hover {
+.forgot-link:hover {
     text-decoration: underline;
 }
 
-/* Footer góc dưới */
-.page-footer {
-    position: absolute;
-    bottom: 20px;
-    right: 30px;
-    font-size: 12px;
-    color: #666;
+/* Nút đăng nhập chính */
+.btn-auth-primary {
+    background-color: var(--auth-primary);
+    border: 1px solid var(--auth-primary);
+    border-radius: 6px;
+    padding: 11px 16px;
+    width: 100%;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #ffffff;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    margin-top: 6px;
 }
 
-.page-footer a {
-    color: #666;
+.btn-auth-primary:hover {
+    background-color: var(--auth-primary-hover);
+    border-color: var(--auth-primary-hover);
+    color: #ffffff;
+}
+
+/* Đường phân cách */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 22px 0;
+    color: var(--auth-muted);
+    font-size: 0.9rem;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.divider:not(:empty)::before {
+    margin-right: 12px;
+}
+
+.divider:not(:empty)::after {
+    margin-left: 12px;
+}
+
+/* Nút đăng nhập Google */
+.btn-google {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: var(--auth-text);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 10px 14px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-decoration: none;
-    margin-left: 20px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-google:hover {
+    background-color: #f8fafc;
+    border-color: #94a3b8;
+    color: var(--auth-text);
+}
+
+/* Liên kết đăng ký */
+.links a {
+    color: var(--auth-primary);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.links a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .glass-container {
+        padding: 32px 24px;
+    }
+}
+/* Mở rộng nhẹ cho form đăng ký có nhiều trường hơn */
+.glass-container.register-container {
+    max-width: 500px;
+}
+
+.glass-container .subtitle {
+    font-size: 0.9rem;
+    color: var(--auth-muted);
+    margin-bottom: 22px;
+    line-height: 1.45;
+}
+
+.glass-container input[type="date"] {
+    color: var(--auth-text);
 }

@@ -20,6 +20,9 @@ namespace DatLichKhamBenh.Controllers
         UserManager<ApplicationUser> userManager) : Controller
     {
         private const decimal GiaKhamMacDinh = 200000m;
+        private static readonly TimeSpan ThoiLuongKham = TimeSpan.FromHours(1);
+
+        private sealed record BookingSlot(string TimeSlot, CaKham CaKham);
 
         [HttpGet]
         public async Task<IActionResult> Create(int? doctorId, int? chuyenKhoaId)
@@ -56,6 +59,22 @@ namespace DatLichKhamBenh.Controllers
             return View(model);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAvailableSlots(int doctorId, DateTime appointmentDate)
+        {
+            if (doctorId <= 0 || appointmentDate.Date < DateTime.Today || appointmentDate.Date > DateTime.Today.AddDays(14))
+            {
+                return BadRequest(new { detail = "Bác sĩ hoặc ngày khám không hợp lệ." });
+            }
+
+            var slots = await GetAvailableBookingSlotsAsync(doctorId, appointmentDate.Date);
+            return Json(slots.Select(slot => new
+            {
+                timeSlot = slot.TimeSlot,
+                caKham = (int)slot.CaKham
+            }));
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(DatLichViewModel model)
@@ -87,24 +106,22 @@ namespace DatLichKhamBenh.Controllers
 
             if (doctor != null && !string.IsNullOrWhiteSpace(model.KhungGio))
             {
-                var coLichLamViec = await context.DoctorSchedules.AnyAsync(s =>
-                    s.DoctorId == doctor.Id
-                    && s.WorkDate.Date == model.NgayKham.Date
-                    && s.TimeSlot == model.KhungGio
-                    && s.IsAvailable
-                    && string.IsNullOrEmpty(s.AbsenceReason));
-                if (!coLichLamViec)
+                var requestedSlot = model.KhungGio.Trim();
+                var scheduleSlots = await GetScheduleBookingSlotsAsync(doctor.Id, model.NgayKham.Date);
+                if (!scheduleSlots.Any(slot => slot.TimeSlot == requestedSlot && slot.CaKham == model.CaKham))
                 {
                     ModelState.AddModelError(nameof(model.KhungGio),
                         "Bác sĩ không có lịch làm việc ở khung giờ này. Vui lòng chọn khung giờ khác.");
                 }
 
-                var daCoLich = await context.Appointments.AnyAsync(a =>
-                    a.DoctorId == doctor.Id &&
-                    a.AppointmentDate.Date == model.NgayKham.Date &&
-                    a.TimeSlot == model.KhungGio &&
-                    a.Status != "Đã hủy" &&
-                    a.Status != "Cancelled");
+                var appointments = await context.Appointments
+                    .AsNoTracking()
+                    .Where(a => a.DoctorId == doctor.Id
+                        && a.AppointmentDate.Date == model.NgayKham.Date
+                        && a.TimeSlot == requestedSlot)
+                    .Select(a => a.Status)
+                    .ToListAsync();
+                var daCoLich = appointments.Any(status => !IsCancelled(status));
 
                 if (daCoLich)
                 {
@@ -200,6 +217,91 @@ namespace DatLichKhamBenh.Controllers
 
             model.PhiCoBan = giaGoc;
             model.TongPhi = model.CaKham == CaKham.Toi ? Math.Round(giaGoc * 1.1m, 0) : giaGoc;
+        }
+
+        private async Task<List<BookingSlot>> GetAvailableBookingSlotsAsync(int doctorId, DateTime workDate)
+        {
+            var scheduleSlots = await GetScheduleBookingSlotsAsync(doctorId, workDate);
+            var bookedSlots = await context.Appointments
+                .AsNoTracking()
+                .Where(a => a.DoctorId == doctorId && a.AppointmentDate.Date == workDate.Date)
+                .Select(a => new { a.TimeSlot, a.Status })
+                .ToListAsync();
+
+            return scheduleSlots
+                .Where(slot => !bookedSlots.Any(appointment =>
+                    appointment.TimeSlot == slot.TimeSlot && !IsCancelled(appointment.Status)))
+                .ToList();
+        }
+
+        private async Task<List<BookingSlot>> GetScheduleBookingSlotsAsync(int doctorId, DateTime workDate)
+        {
+            var schedules = await context.DoctorSchedules
+                .AsNoTracking()
+                .Where(schedule => schedule.DoctorId == doctorId
+                    && schedule.WorkDate.Date == workDate.Date
+                    && schedule.IsAvailable)
+                .ToListAsync();
+
+            var slots = new List<BookingSlot>();
+            foreach (var schedule in schedules)
+            {
+                if (!string.IsNullOrWhiteSpace(schedule.AbsenceReason))
+                {
+                    continue;
+                }
+
+                var times = schedule.TimeSlot.Split('-', 2);
+                if (times.Length != 2
+                    || !TimeSpan.TryParse(times[0].Trim(), CultureInfo.InvariantCulture, out var start)
+                    || !TimeSpan.TryParse(times[1].Trim(), CultureInfo.InvariantCulture, out var end))
+                {
+                    continue;
+                }
+
+                for (var slotStart = start; slotStart + ThoiLuongKham <= end; slotStart += ThoiLuongKham)
+                {
+                    var slotEnd = slotStart + ThoiLuongKham;
+                    slots.Add(new BookingSlot(
+                        $"{slotStart.ToString(@"hh\:mm", CultureInfo.InvariantCulture)} - {slotEnd.ToString(@"hh\:mm", CultureInfo.InvariantCulture)}",
+                        GetCaKham(schedule.Shift, slotStart)));
+                }
+            }
+
+            return slots
+                .GroupBy(slot => new { slot.TimeSlot, slot.CaKham })
+                .Select(group => group.First())
+                .OrderBy(slot => slot.CaKham)
+                .ThenBy(slot => slot.TimeSlot)
+                .ToList();
+        }
+
+        private static CaKham GetCaKham(string? shift, TimeSpan start)
+        {
+            var normalizedShift = (shift ?? string.Empty).Trim().ToLowerInvariant();
+            if (normalizedShift.Contains("chiều") || normalizedShift.Contains("chieu"))
+            {
+                return CaKham.Chieu;
+            }
+
+            if (normalizedShift.Contains("tối") || normalizedShift.Contains("toi"))
+            {
+                return CaKham.Toi;
+            }
+
+            if (normalizedShift.Contains("sáng") || normalizedShift.Contains("sang"))
+            {
+                return CaKham.Sang;
+            }
+
+            return start.Hours >= 18 ? CaKham.Toi : start.Hours >= 12 ? CaKham.Chieu : CaKham.Sang;
+        }
+
+        private static bool IsCancelled(string? status)
+        {
+            var normalizedStatus = (status ?? string.Empty).Trim();
+            return normalizedStatus.Equals("Đã hủy", StringComparison.OrdinalIgnoreCase)
+                || normalizedStatus.Equals("Cancelled", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
